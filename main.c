@@ -724,11 +724,14 @@ int main(int argc, char *argv[]) {
     lv_label_set_text(furios_label, "FuriOS Recovery");
     lv_obj_align(furios_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    /* FuriOS logo */
-    images[0] = lv_img_create(lv_scr_act());
+    /* Initialize images */
+    for (int i = 0; i < NUM_IMAGES; i++)
+        images[i] = lv_img_create(lv_scr_act());
+
+    /* Furilabs logo */
     lv_obj_align(images[0], LV_ALIGN_TOP_MID, 0, 100);
     
-    /* Initialize images */
+    /* Set image mode */
     update_image_mode(is_alternate_theme);
 
     /* Reboot button */
