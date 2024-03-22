@@ -73,13 +73,13 @@ lv_obj_t *keyboard = NULL;
 LV_IMG_DECLARE(furilabs_white)
 LV_IMG_DECLARE(furilabs_black)
 
-static const void *darkmode_imgs[] = {&furilabs_white};
-static const void *lightmode_imgs[] = {&furilabs_black};
+const void *darkmode_imgs[] = {&furilabs_white};
+const void *lightmode_imgs[] = {&furilabs_black};
 
 /*
    0: FuriLabs logo
 */
-static lv_obj_t* images[1];
+lv_obj_t* images[1];
 
 /**
  * Static prototypes
