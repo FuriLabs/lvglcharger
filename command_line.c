@@ -1,7 +1,7 @@
 /**
  * Copyright 2021 Johannes Marbach
  *
- * This file is part of unl0kr, hereafter referred to as the program.
+ * This file is part of furios-recovery, hereafter referred to as the program.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #include "command_line.h"
 
 #include "log.h"
-#include "unl0kr.h"
+#include "furios-recovery.h"
 
 #include <getopt.h>
 #include <stdio.h>
@@ -57,7 +57,7 @@ static void init_opts(ul_cli_opts *opts) {
         ul_log(UL_LOG_LEVEL_ERROR, "Could not allocate memory for config file paths");
         exit(EXIT_FAILURE);
     }
-    opts->config_files[0] = "/etc/unl0kr.conf";
+    opts->config_files[0] = "/etc/furios-recovery.conf";
 
     opts->hor_res = -1;
     opts->ver_res = -1;
@@ -69,14 +69,14 @@ static void init_opts(ul_cli_opts *opts) {
 static void print_usage() {
     fprintf(stderr,
         /*-------------------------------- 78 CHARS --------------------------------*/
-        "Usage: unl0kr [OPTION]\n"
+        "Usage: furios-recovery [OPTION]\n"
         "\n"
-        "Unl0kr values the CRYPTTAB_TRIED variable. Upon completion, the entered\n"
+        "furios-recovery values the CRYPTTAB_TRIED variable. Upon completion, the entered\n"
         "password is printed to STDOUT. All other output happens on STDERR.\n"
         "\n"
         "Mandatory arguments to long options are mandatory for short options too.\n"
         "  -c, --config=PATH         Locaton of the main config file. Defaults to\n"
-        "                            /etc/unl0kr.conf.\n"
+        "                            /etc/furios-recovery.conf.\n"
         "  -C, --config-override     Location of the config override file. Values in\n"
         "                            this file override values for the same keys in\n"
         "                            the main config file. If specified multiple\n"
@@ -88,7 +88,7 @@ static void print_usage() {
         "  -d  --dpi=N               Override the display's DPI value\n"
         "  -h, --help                Print this message and exit\n"
         "  -v, --verbose             Enable more detailed logging output on STDERR\n"
-        "  -V, --version             Print the unl0kr version and exit\n");
+        "  -V, --version             Print the furios-recovery version and exit\n");
         /*-------------------------------- 78 CHARS --------------------------------*/
 }
 
@@ -148,7 +148,7 @@ void ul_cli_parse_opts(int argc, char *argv[], ul_cli_opts *opts) {
             opts->verbose = true;
             break;
         case 'V':
-            fprintf(stderr, "unl0kr %s\n", UL_VERSION);
+            fprintf(stderr, "furios-recovery %s\n", UL_VERSION);
             exit(0);
         default:
             print_usage();

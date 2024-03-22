@@ -18,7 +18,7 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-copy_exec /usr/bin/unl0kr
+copy_exec /usr/bin/furios-recovery
 
 mkdir -p "${DESTDIR}/etc"
-cp /etc/unl0kr.conf "${DESTDIR}/etc"
+cp /etc/furios-recovery.conf "${DESTDIR}/etc"

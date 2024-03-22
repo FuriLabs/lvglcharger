@@ -1,9 +1,10 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: unl0kr
-Source: https://gitlab.com/cherrypicker/unl0kr
+Upstream-Name: furios-recovery
+Source: https://github.com/FuriLabs/furios-recovery
 
 Files: *
 Copyright: 2021-2022, Johannes Marbach
+           2024, Bardia Moshiri
 License: GPL-3+
 
 Files: meson.build

@@ -1,70 +1,17 @@
-Unl0kr
-======
+FuriOS Recovery
+===============
 
-Disk unlocker for the initramfs based on [LVGL].
-
-[[_TOC_]]
-
-# About
-
-Unl0kr is an [osk-sdl] clone written in [LVGL] and rendering directly to the Linux framebuffer. As a result, it doesn't depend on GPU hardware acceleration.
-
-For some background on how unl0kr came to be, see postmarketOS/osk-sdl#121.
-
-# Status
-
-We are en route to v1 which aims at providing a useable, visually pleasant application including [osk-sdl]'s most essential features. For details about the current status, see the [v1 milestone]. You may also browse the full list of [open issues] to get an idea of what's planned beyond v1.
-
-Here are a few highlights of what already works:
-
-- Password-entry UI including on-screen keyboard on the framebuffer
-- Input device discovery for keyboards, mice, trackpads and touch screens
-- On-screen keyboard control via:
-  - One or more mice / trackpads (including cursor)
-  - One or more hardware keyboards (including support for different layouts using XKB)
-  - Touchscreen (tested on PinePhone)
-- Switching on-screen keyboard layout at runtime (currently supported layouts: de, es, fr, us)
-- Toggling on-screen keyboard with slide in/out animation
-- Switching between light and dark theme at runtime
-- Disclosing and hiding entered password at runtime
-- Shutting down the device via a soft button
-
-For a growing collection of demo videos, see the [wiki]. Screenshots of the currently available themes may be found in the [screenshots] folder.
-
-## Upstreaming
-
-Over the course of implementing unl0kr, suitable fixes and features have been upstreamed to the [lvgl] and [lv_drivers] repositories. The benefit of this goes both ways. Downstream we can rely on the features being maintained in the future and upstream they can make the features available to the larger audience of [LVGL] users.
-
-Below is a summary of contributions upstreamed thus far.
-
-### lvgl
-
-- [fix(examples) don't compile assets unless needed] (✅ merged)
-- [feat(btnmatrix): add option to show popovers on button press] (✅ merged)
-- [feat(msgbox): add function to get selected button index] (✅ merged)
-- [feat(msgbox): omit title label unless needed] (✅ merged)
-- [fix(btnmatrix): make ORed values work correctly with lv_btnmatrix_has_btn_ctrl] (✅ merged)
-
-### lv_drivers
-
-- [Add support for pointer devices to libinput driver] (✅ merged)
-- [Add support for keypads to libinput driver] (✅ merged)
-- [Add full keyboard support to libinput/evdev driver] (✅ merged)
-- [Automatic device discovery via libinput] (✅ merged)
-- [Make it possible to use multiple devices with the libinput and XKB drivers] (✅ merged)
-- [Use LV_LOG instead of printf in fbdev driver] (✅ merged)
+Recovery project for the initramfs based on [LVGL].
 
 # Usage
 
-A man page is planned to be added with #6. For the time being, you can get an overview of available command line options by running unl0kr with the `-h` or `--help` argument.
-
 ```
-$ unl0kr --help
-Usage: unl0kr [OPTION]
+$ furios-recovery --help
+Usage: furios-recovery [OPTION]
 
 Mandatory arguments to long options are mandatory for short options too.
   -c, --config=PATH      Locaton of the main config file. Defaults to
-                         /etc/unl0kr.conf.
+                         /etc/furios-recovery.conf.
   -C, --config-override  Location of the config override file. Values in
                          this file override values for the same keys in the
                          main config file. If specified multiple times, the
@@ -75,10 +22,10 @@ Mandatory arguments to long options are mandatory for short options too.
   -d  --dpi=N            Overrides the DPI
   -h, --help             Print this message and exit
   -v, --verbose          Enable more detailed logging output on STDERR
-  -V, --version          Print the unl0kr version and exit
+  -V, --version          Print the furios-recovery version and exit
 ```
 
-For an example configuration file, see [unl0kr.conf].
+For an example configuration file, see [furios-recovery].
 
 # Development
 
@@ -95,11 +42,11 @@ For an example configuration file, see [unl0kr.conf].
 
 ## Building & running
 
-Some of unl0kr's dependencies are included as git submodules in this repository. You can clone the repository and initialise the submodules with
+Some of FuriOS Recovery's dependencies are included as git submodules in this repository. You can clone the repository and initialise the submodules with
 
 ```
-$ git clone https://gitlab.com/cherrypicker/unl0kr.git
-$ cd unl0kr
+$ git clone https://github.com/furilabs/furios-recovery.git
+$ cd furios-recovery
 $ git submodule init
 $ git submodule update
 ```
@@ -112,7 +59,7 @@ Once you have the sources, you can build the app and run it in a VT. Unless your
 $ meson _build
 $ meson compile -C _build
 $ sudo chvt 2
-$ sudo ./_build/unl0kr
+$ sudo ./_build/furios-recovery
 ```
 
 With meson <0\.55 use `ninja` instead of `meson compile`\.
@@ -130,18 +77,19 @@ will forcibly disable the DRM backend regardless if libdrm is installed or not.
 
 ## Backends
 
-Unl0kr supports multiple lvgl display drivers, which are herein referred as "backends".
+FuriOS Recovery supports multiple lvgl display drivers, which are herein referred as "backends".
 
 Currently supported backends:
 
 - fbdev
 - drm (optional)
+- minui (optional)
 
 The backend can be switched at runtime by modifying the `general.backend` configuration.
 
 ## Fonts
 
-In order to work with [LVGL], fonts need to be converted to bitmaps, stored as C arrays. Unl0kr currently uses a combination of the [OpenSans] font for text and the [FontAwesome] font for pictograms. For both fonts only limited character ranges are included to reduce the binary size. To (re)generate the C file containing the combined font, run the following command
+In order to work with [LVGL], fonts need to be converted to bitmaps, stored as C arrays. FuriOS Recovery currently uses a combination of the [OpenSans] font for text and the [FontAwesome] font for pictograms. For both fonts only limited character ranges are included to reduce the binary size. To (re)generate the C file containing the combined font, run the following command
 
 ```
 $ ./regenerate-fonts.sh
@@ -165,7 +113,7 @@ Below is a short explanation of the different unicode ranges used above.
 
 ## Keyboard layouts
 
-Unl0kr uses [squeekboard layouts] converted to C via [squeek2lvgl]. To regenerate the layouts, ensure that you have pipenv installed (e.g. via `pip install --user pipenv`) and then run
+FuriOS Recovery uses [squeekboard layouts] converted to C via [squeek2lvgl]. To regenerate the layouts, ensure that you have pipenv installed (e.g. via `pip install --user pipenv`) and then run
 
 ```
 $ ./regenerate-layouts.sh
@@ -173,33 +121,9 @@ $ ./regenerate-layouts.sh
 
 from the root of the repository.
 
-## Generating screenshots
-
-To generate screenshots in a variety of common sizes, build unl0kr and then run
-
-```
-$ sudo ./regenerate-screenshots _build/unl0kr
-```
-
-where `_build/unl0kr` is the location of the unl0kr binary. Note that you may have to adapt some of the settings inside the script depending on the device you're using to generate the screenshots.
-
-## Screen recording
-
-For demonstration purposes you can record the framebuffer device, e.g. with ffmpeg:
-
-```
-$ sudo ffmpeg -f fbdev -i /dev/fb0 -r 24 -c:v libx264 -b:v 500k demo.avi
-```
-
-# Acknowledgements
-
-The [lv_port_linux_frame_buffer] project served as a starting point for the codebase.
-
-The mouse cursor image was taken from [lv_sim_emscripten].
-
 # License
 
-Unl0kr is licensed under the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+FuriOS Recovery is licensed under the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 The [OpenSans] font is licensed under the Apache License 2.0.
 
@@ -230,11 +154,9 @@ The [FontAwesome] font is licensed under the Open Font License version 1.1.
 [lv_sim_emscripten]: https://github.com/lvgl/lv_sim_emscripten/blob/master/mouse_cursor_icon.c
 [lvgl]: https://github.com/lvgl/lvgl
 [online font converter]: https://lvgl.io/tools/fontconverter
-[open issues]: https://gitlab.com/cherrypicker/unl0kr/-/issues
+[open issues]: https://github.com/furilabs/furios-recovery/-/issues
 [osk-sdl]: https://gitlab.com/postmarketOS/osk-sdl
 [screenshots]: ./screenshots
 [squeek2lvgl]: https://gitlab.com/cherrypicker/squeek2lvgl
 [squeekboard layouts]: https://gitlab.gnome.org/World/Phosh/squeekboard/-/tree/master/data/keyboards
-[unl0kr.conf]: ./unl0kr.conf
-[v1 milestone]: https://gitlab.com/cherrypicker/unl0kr/-/milestones/1
-[wiki]: https://gitlab.com/cherrypicker/unl0kr/-/wikis/home
+[furios-recovery.conf]: ./furios-recovery.conf

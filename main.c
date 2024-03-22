@@ -2,7 +2,7 @@
  * Copyright 2021 Johannes Marbach
  * Copyright 2024 Bardia Moshiri
  *
- * This file is part of unl0kr, hereafter referred to as the program.
+ * This file is part of furios-recovery, hereafter referred to as the program.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #include "config.h"
 #include "indev.h"
 #include "log.h"
-#include "unl0kr.h"
+#include "furios-recovery.h"
 #include "terminal.h"
 #include "theme.h"
 #include "themes.h"
@@ -577,7 +577,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Announce ourselves */
-    ul_log(UL_LOG_LEVEL_VERBOSE, "unl0kr %s", UL_VERSION);
+    ul_log(UL_LOG_LEVEL_VERBOSE, "furios-recovery %s", UL_VERSION);
 
     /* Parse config files */
     ul_config_parse(cli_opts.config_files, cli_opts.num_config_files, &conf_opts);

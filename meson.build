@@ -1,6 +1,6 @@
 # Copyright 2021 Clayton Craft
 #
-# This file is part of unl0kr, hereafter referred to as the program.
+# This file is part of furios-recovery, hereafter referred to as the program.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 
 project(
-  'unl0kr',
+  'furios-recovery',
   'c',
   version: '0.1.0',
   default_options: 'warning_level=3',
@@ -28,7 +28,7 @@ add_project_arguments('-DUL_VERSION="@0@"'.format(meson.project_version()), lang
 
 enable_static = (get_option('default_library') == 'static')
 
-unl0kr_sources = [
+furios_recovery_sources = [
   'backends.c',
   'command_line.c',
   'config.c',
@@ -41,29 +41,31 @@ unl0kr_sources = [
   'terminal.c',
   'theme.c',
   'themes.c',
+  'lvm.c',
 ]
 
 squeek2lvgl_sources = [
   'squeek2lvgl/sq2lv.c',
 ]
 
-unl0kr_dependencies = [
+furios_recovery_dependencies = [
   dependency('inih', static: enable_static),
   dependency('libinput', static: enable_static),
   dependency('xkbcommon', static: enable_static),
+  dependency('libcryptsetup', static: enable_static),
 ]
 
 cc = meson.get_compiler('c')
 
 libdrm_dep = dependency('libdrm', required: get_option('with-drm'), static: enable_static)
 if libdrm_dep.found()
-  unl0kr_dependencies += [libdrm_dep]
+  furios_recovery_dependencies += [libdrm_dep]
   add_project_arguments('-DUSE_DRM=1', language: ['c'])
 endif
 
 minui_dep = dependency('minui', required: get_option('with-minui'), static: enable_static)
 if minui_dep.found()
-  unl0kr_dependencies += [
+  furios_recovery_dependencies += [
     minui_dep,
     cc.find_library('m', required : false, static: enable_static)
   ]
@@ -78,13 +80,13 @@ lvgl_sources = run_command('find-lvgl-sources.sh', 'lvgl', check: true).stdout()
 
 lv_drivers_sources = run_command('find-lvgl-sources.sh', 'lv_drivers', check: true).stdout().strip().split('\n')
 
-install_data(sources: 'unl0kr.conf', install_dir : get_option('sysconfdir'))
+install_data(sources: 'furios-recovery.conf', install_dir : get_option('sysconfdir'))
 
 
 executable(
-  'unl0kr',
-  sources: unl0kr_sources + squeek2lvgl_sources + lvgl_sources + lv_drivers_sources,
+  'furios-recovery',
+  sources: furios_recovery_sources + squeek2lvgl_sources + lvgl_sources + lv_drivers_sources,
   include_directories: ['lvgl', 'lv_drivers'],
-  dependencies: unl0kr_dependencies,
+  dependencies: furios_recovery_dependencies,
   install: true
 )

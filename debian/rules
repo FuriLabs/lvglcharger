@@ -13,4 +13,4 @@ override_dh_installinitramfs:
 
 override_dh_auto_install:
 	dh_auto_install
-	cp $(CURDIR)/debian/unl0kr.droidian.conf $(CURDIR)/debian/unl0kr/etc/unl0kr.conf
+	cp $(CURDIR)/debian/furios-recovery.droidian.conf $(CURDIR)/debian/furios-recovery/etc/furios-recovery.conf

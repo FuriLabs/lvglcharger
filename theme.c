@@ -1,7 +1,7 @@
 /**
  * Copyright 2021 Johannes Marbach
  *
- * This file is part of unl0kr, hereafter referred to as the program.
+ * This file is part of furios-recovery, hereafter referred to as the program.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 
 #include "log.h"
 #include "sq2lv_layouts.h"
-#include "unl0kr.h"
+#include "furios-recovery.h"
 
 #include "lvgl/lvgl.h"
 
