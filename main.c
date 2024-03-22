@@ -105,6 +105,13 @@ static void toggle_theme(void);
 static void set_theme(bool is_dark);
 
 /**
+ * Set the image mode
+ *
+ * @param is_dark true if the dark theme should be applied, false if the light theme should be applied
+ */
+static void update_image_mode(bool is_dark);
+
+/**
  * Handle LV_EVENT_CLICKED events from the show/hide password toggle button.
  *
  * @param event the event object
@@ -262,11 +269,14 @@ static void toggle_theme_btn_clicked_cb(lv_event_t *event) {
 
 static void toggle_theme(void) {
     is_alternate_theme = !is_alternate_theme;
-
-    for (int i = 0; i < NUM_IMAGES; i++)
-        lv_img_set_src(images[i], is_alternate_theme ? lightmode_imgs[i] : darkmode_imgs[i]);
-
+ 
+    update_image_mode(is_alternate_theme);
     set_theme(is_alternate_theme);
+}
+
+static void update_image_mode(bool is_alternate) {
+    for (int i = 0; i < NUM_IMAGES; i++)
+        lv_img_set_src(images[i], is_alternate ? darkmode_imgs[i] : lightmode_imgs[i]);
 }
 
 static void set_theme(bool is_alternate) {
@@ -716,9 +726,11 @@ int main(int argc, char *argv[]) {
 
     /* FuriOS logo */
     images[0] = lv_img_create(lv_scr_act());
-    lv_img_set_src(images[0], &furilabs_white);
     lv_obj_align(images[0], LV_ALIGN_TOP_MID, 0, 100);
     
+    /* Initialize images */
+    update_image_mode(is_alternate_theme);
+
     /* Reboot button */
     lv_obj_t *reboot_btn = lv_btn_create(label_container);
     lv_obj_set_width(reboot_btn, LV_PCT(100));
