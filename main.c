@@ -1,6 +1,7 @@
 /**
  * Copyright 2021 Johannes Marbach
  * Copyright 2024 Bardia Moshiri
+ * Copyright 2024 David Badiei
  *
  * This file is part of furios-recovery, hereafter referred to as the program.
  *
@@ -54,6 +55,7 @@
 #include <sys/reboot.h>
 #include <sys/time.h>
 
+#define NUM_IMAGES 1
 
 /**
  * Static variables
@@ -67,6 +69,14 @@ bool is_password_obscured = true;
 bool is_keyboard_hidden = true;
 
 lv_obj_t *keyboard = NULL;
+
+static const void *darkmode_imgs[] = {&furilabs-white};
+static const void *lightmode_imgs[] = {&furilabs-black};
+
+/*
+   0: FuriLabs logo
+*/
+static lv_obj_t* images[1];
 
 /**
  * Static prototypes
@@ -249,6 +259,10 @@ static void toggle_theme_btn_clicked_cb(lv_event_t *event) {
 
 static void toggle_theme(void) {
     is_alternate_theme = !is_alternate_theme;
+
+    for (int i = 0; i < NUM_IMAGES; i++)
+        lv_img_set_src(images[i], is_alternate_theme ? lightmode_imgs[i] : darkmode_imgs[i]);
+
     set_theme(is_alternate_theme);
 }
 
@@ -697,6 +711,11 @@ int main(int argc, char *argv[]) {
     lv_label_set_text(furios_label, "FuriOS Recovery");
     lv_obj_align(furios_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
+    /* FuriOS logo */
+    images[0] = lv_img_create(lv_scr_act(), NULL);
+    lv_img_set_src(images[0], &furilabs-white);
+    lv_obj_align(images[0], LV_ALIGN_TOP_MID, 0, 100);
+    
     /* Reboot button */
     lv_obj_t *reboot_btn = lv_btn_create(label_container);
     lv_obj_set_width(reboot_btn, LV_PCT(100));
