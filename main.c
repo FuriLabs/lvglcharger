@@ -70,8 +70,11 @@ bool is_keyboard_hidden = true;
 
 lv_obj_t *keyboard = NULL;
 
-static const void *darkmode_imgs[] = {&furilabs-white};
-static const void *lightmode_imgs[] = {&furilabs-black};
+LV_IMG_DECLARE(furilabs_white)
+LV_IMG_DECLARE(furilabs_black)
+
+static const void *darkmode_imgs[] = {&furilabs_white};
+static const void *lightmode_imgs[] = {&furilabs_black};
 
 /*
    0: FuriLabs logo
@@ -712,8 +715,8 @@ int main(int argc, char *argv[]) {
     lv_obj_align(furios_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* FuriOS logo */
-    images[0] = lv_img_create(lv_scr_act(), NULL);
-    lv_img_set_src(images[0], &furilabs-white);
+    images[0] = lv_img_create(lv_scr_act());
+    lv_img_set_src(images[0], &furilabs_white);
     lv_obj_align(images[0], LV_ALIGN_TOP_MID, 0, 100);
     
     /* Reboot button */
