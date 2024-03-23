@@ -64,7 +64,7 @@
 ul_cli_opts cli_opts;
 ul_config_opts conf_opts;
 
-bool is_alternate_theme = false;
+bool is_alternate_theme = true;
 bool is_password_obscured = true;
 bool is_keyboard_hidden = true;
 
@@ -276,7 +276,7 @@ static void toggle_theme(void) {
 
 static void update_image_mode(bool is_alternate) {
     for (int i = 0; i < NUM_IMAGES; i++)
-        lv_img_set_src(images[i], is_alternate ? darkmode_imgs[i] : lightmode_imgs[i]);
+        lv_img_set_src(images[i], is_alternate ? lightmode_imgs[i] : darkmode_imgs[i]);
 }
 
 static void set_theme(bool is_alternate) {
@@ -741,7 +741,7 @@ int main(int argc, char *argv[]) {
     lv_obj_t *reboot_btn_label = lv_label_create(reboot_btn);
     lv_label_set_text(reboot_btn_label, "Reboot");
     lv_obj_add_event_cb(reboot_btn, reboot_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(reboot_btn, LV_ALIGN_TOP_MID, 0, 200);
+    lv_obj_align(reboot_btn, LV_ALIGN_TOP_MID, 0, 500);
     lv_obj_set_flex_flow(reboot_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(reboot_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
@@ -752,7 +752,7 @@ int main(int argc, char *argv[]) {
     lv_obj_t *shutdown_middle_btn_label = lv_label_create(shutdown_middle_btn);
     lv_label_set_text(shutdown_middle_btn_label, "Shutdown");
     lv_obj_add_event_cb(shutdown_middle_btn, shutdown_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(shutdown_middle_btn, LV_ALIGN_TOP_MID, 0, 300);
+    lv_obj_align(shutdown_middle_btn, LV_ALIGN_TOP_MID, 0, 600);
     lv_obj_set_flex_flow(shutdown_middle_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(shutdown_middle_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
@@ -763,7 +763,7 @@ int main(int argc, char *argv[]) {
     lv_obj_t *factory_reset_btn_label = lv_label_create(factory_reset_btn);
     lv_label_set_text(factory_reset_btn_label, "Factory Reset");
     lv_obj_add_event_cb(factory_reset_btn, factory_reset_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(factory_reset_btn, LV_ALIGN_TOP_MID, 0, 400);
+    lv_obj_align(factory_reset_btn, LV_ALIGN_TOP_MID, 0, 700);
     lv_obj_set_flex_flow(factory_reset_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(factory_reset_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
@@ -774,7 +774,7 @@ int main(int argc, char *argv[]) {
     lv_obj_t *theme_btn_label = lv_label_create(theme_btn);
     lv_label_set_text(theme_btn_label, "Toggle Theme");
     lv_obj_add_event_cb(theme_btn, toggle_theme_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(theme_btn, LV_ALIGN_TOP_MID, 0, 500);
+    lv_obj_align(theme_btn, LV_ALIGN_TOP_MID, 0, 800);
     lv_obj_set_flex_flow(theme_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(theme_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
