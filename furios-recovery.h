@@ -22,6 +22,8 @@
 #define UL_FURIOS_RECOVERY_H
 
 #include "lvgl/lvgl.h"
+#include <sys/stat.h>
+#include <sys/mount.h>
 
 #ifndef UL_VERSION
 #define UL_VERSION "?" /* Just to silence IDE warning. Real version injected by meson during build. */

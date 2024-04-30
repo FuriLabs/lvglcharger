@@ -191,6 +191,11 @@ static void reboot_mbox_value_changed_cb(lv_event_t *event);
 static void factory_reset_btn_clicked_cb(lv_event_t *event);
 
 /**
+ * Handle LV_EVENT_CLICKED events from the factory reset confirmation button.
+ */
+static void perform_factory_reset(lv_timer_t *timer);
+
+/**
  * Handle LV_EVENT_VALUE_CHANGED events from the factory reset message box.
  *
  * @param event the event object
@@ -210,13 +215,6 @@ static void close_mbox_cb(lv_event_t *event);
 static void keyboard_value_changed_cb(lv_event_t *event);
 
 /**
- * Handle LV_EVENT_READY events from the keyboard widget.
- *
- * @param event the event object
- */
-static void keyboard_ready_cb(lv_event_t *event);
-
-/**
  * Handle LV_EVENT_READY events from the textarea widget.
  *
  * @param event the event object
@@ -224,16 +222,21 @@ static void keyboard_ready_cb(lv_event_t *event);
 static void textarea_ready_cb(lv_event_t *event);
 
 /**
- * Print out the entered password and exit.
+ * Check password against LVM
  *
  * @param textarea the textarea widget
  */
-static void print_password_and_exit(lv_obj_t *textarea);
+static void check_password(lv_obj_t *textarea);
+
+/**
+ * Handle LV_EVENT_CLICKED events from the password check
+ */
+static void factory_reset_password(lv_timer_t *timer);
 
 /**
  * Factory resets the device
  */
-static void factory_reset(void);
+static int factory_reset(void);
 
 /**
  * Decrypts the device
@@ -364,7 +367,7 @@ static void reboot_mbox_value_changed_cb(lv_event_t *event) {
 
 static void factory_reset_btn_clicked_cb(lv_event_t *event) {
     LV_UNUSED(event);
-    static const char *btns[] = { "Yes", "No", "" };
+    static const char *btns[] = {"Yes", "No", ""};
     lv_obj_t *mbox = lv_msgbox_create(NULL, NULL, "Factory reset device?", btns, false);
     lv_obj_set_size(mbox, 400, LV_SIZE_CONTENT);
     lv_obj_add_event_cb(mbox, factory_reset_mbox_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
@@ -374,46 +377,68 @@ static void factory_reset_btn_clicked_cb(lv_event_t *event) {
 static void factory_reset_mbox_value_changed_cb(lv_event_t *event) {
     lv_obj_t *mbox = lv_event_get_current_target(event);
     if (lv_msgbox_get_active_btn(mbox) == 0) {
-        const char *lvm_device_path = "/dev/droidian/droidian-persistent";
-        size_t print_bytes = 64;
-        int result = is_lv_encrypted_with_luks(lvm_device_path, print_bytes);
+        lv_msgbox_close(mbox);
 
-        if (result == -1) {
-            // rootfs.img in data? well we can't reset that for now
-            static const char *btns[] = { "OK", ""};
-            lv_obj_t *fail_mbox = lv_msgbox_create(NULL, NULL, "Failed to factory reset", btns, false);
-            lv_obj_set_size(fail_mbox, 400, LV_SIZE_CONTENT);
-            lv_obj_add_event_cb(fail_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
-            lv_obj_center(fail_mbox);
-        } else if (result == 1) {
-            // LVM is encrypted, we have to decrypt first
-            static const char *btns[] = { "OK", ""};
+        lv_obj_t *resetting_mbox = lv_msgbox_create(NULL, NULL, "Resetting device...", NULL, false);
+        lv_obj_set_size(resetting_mbox, 400, LV_SIZE_CONTENT);
+        lv_obj_center(resetting_mbox);
+
+        lv_timer_t *timer = lv_timer_create(perform_factory_reset, 500, resetting_mbox);
+        lv_timer_set_repeat_count(timer, 1);
+    } else {
+        lv_msgbox_close(mbox);
+    }
+}
+
+static void perform_factory_reset(lv_timer_t *timer) {
+    lv_obj_t *resetting_mbox = (lv_obj_t *)timer->user_data;
+    const char *lvm_device_path = "/dev/droidian/droidian-persistent";
+    size_t print_bytes = 64;
+    int result = is_lv_encrypted_with_luks(lvm_device_path, print_bytes);
+
+    result = 1;
+    if (result == -1) {
+        // rootfs.img in data? well we can't reset that for now
+        lv_msgbox_close(resetting_mbox);
+        static const char *btns[] = {"OK", ""};
+        lv_obj_t *fail_mbox = lv_msgbox_create(NULL, NULL, "Failed to factory reset", btns, false);
+        lv_obj_set_size(fail_mbox, 400, LV_SIZE_CONTENT);
+        lv_obj_add_event_cb(fail_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
+        lv_obj_center(fail_mbox);
+    } else {
+        if (result == 1) {
+            decrypt(); // Decrypt LVM if necessary
+            lv_msgbox_close(resetting_mbox);
+            return;
+        }
+
+        // LVM is not encrypted or unlocked, we can continue
+        int factory_reset_result = factory_reset();
+
+        lv_msgbox_close(resetting_mbox);
+
+        if (factory_reset_result == 0) {
+            static const char *btns[] = {"OK", ""};
             lv_obj_t *success_mbox = lv_msgbox_create(NULL, NULL, "Successfully reset to factory settings", btns, false);
             lv_obj_set_size(success_mbox, 400, LV_SIZE_CONTENT);
             lv_obj_add_event_cb(success_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
             lv_obj_center(success_mbox);
-            decrypt();
-            factory_reset();
         } else {
-            // LVM is not encrypted, we can continue
-//            factory_reset();
-            decrypt();
-            factory_reset();
-
-            static const char *btns[] = { "OK", ""};
-            lv_obj_t *success_mbox = lv_msgbox_create(NULL, NULL, "Successfully reset to factory settings", btns, false);
-            lv_obj_set_size(success_mbox, 400, LV_SIZE_CONTENT);
-            lv_obj_add_event_cb(success_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
-            lv_obj_center(success_mbox);
-            decrypt();
-            factory_reset();
+            static const char *btns[] = {"OK", ""};
+            lv_obj_t *error_mbox = lv_msgbox_create(NULL, NULL, "Failed to factory reset", btns, false);
+            lv_obj_set_size(error_mbox, 400, LV_SIZE_CONTENT);
+            lv_obj_add_event_cb(error_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
+            lv_obj_center(error_mbox);
         }
     }
-    lv_msgbox_close(mbox);
 }
 
 static void close_mbox_cb(lv_event_t *event) {
     lv_obj_t *mbox = lv_event_get_current_target(event);
+
+    // maybe do something instead of sleep?
+    sleep(3);
+    reboot_device();
     lv_msgbox_close(mbox);
 }
 
@@ -433,21 +458,89 @@ static void keyboard_value_changed_cb(lv_event_t *event) {
     lv_keyboard_def_event_cb(event);
 }
 
-static void keyboard_ready_cb(lv_event_t *event) {
-    print_password_and_exit(lv_keyboard_get_textarea(lv_event_get_target(event)));
-}
-
 static void textarea_ready_cb(lv_event_t *event) {
-    print_password_and_exit(lv_event_get_target(event));
+    check_password(lv_event_get_target(event));
 }
 
-static void print_password_and_exit(lv_obj_t *textarea) {
-    printf("%s\n", lv_textarea_get_text(textarea));
-    sigaction_handler(SIGTERM);
+static void check_password(lv_obj_t *textarea) {
+    const char *password = lv_textarea_get_text(textarea);
+
+    static int attempt_count = 0;
+
+    int result = mount_luks_lvm(password);
+    if (result == EXIT_SUCCESS) {
+        lv_obj_t *resetting_mbox = lv_msgbox_create(NULL, NULL, "Resetting device...", NULL, false);
+        lv_obj_set_size(resetting_mbox, 400, LV_SIZE_CONTENT);
+        lv_obj_center(resetting_mbox);
+        lv_timer_t *timer = lv_timer_create(factory_reset_password, 500, resetting_mbox);
+        lv_timer_set_repeat_count(timer, 1);
+    } else if (result == 2) {
+        attempt_count++;
+        if (attempt_count >= 3) {
+            lv_obj_t *resetting_mbox = lv_msgbox_create(NULL, NULL, "Maximum password attempt reached.", NULL, false);
+            lv_obj_set_size(resetting_mbox, 400, LV_SIZE_CONTENT);
+            lv_obj_center(resetting_mbox);
+        }
+    }
 }
 
-static void factory_reset(void) {
-    sleep(5);
+static void factory_reset_password(lv_timer_t *timer) {
+    lv_obj_t *resetting_mbox = (lv_obj_t *)timer->user_data;
+
+    int factory_reset_result = factory_reset();
+
+    lv_msgbox_close(resetting_mbox);
+
+    if (factory_reset_result == 0) {
+        static const char *btns[] = {"OK", ""};
+        lv_obj_t *success_mbox = lv_msgbox_create(NULL, NULL, "Successfully reset to factory settings", btns, false);
+        lv_obj_set_size(success_mbox, 400, LV_SIZE_CONTENT);
+        lv_obj_add_event_cb(success_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
+        lv_obj_center(success_mbox);
+    } else {
+        static const char *btns[] = {"OK", ""};
+        lv_obj_t *error_mbox = lv_msgbox_create(NULL, NULL, "Failed to factory reset", btns, false);
+        lv_obj_set_size(error_mbox, 400, LV_SIZE_CONTENT);
+        lv_obj_add_event_cb(error_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
+        lv_obj_center(error_mbox);
+    }
+}
+
+static int factory_reset(void) {
+    // the reason most things here are system calls is because our ramdisk must be small and more libraries we link against the bigger the binary will get
+    // here, we're using pre existing binaries in the ramdisk to not take too much storage in the ramdisk
+    char cmd[256];
+    int result;
+
+    snprintf(cmd, sizeof(cmd), "dmsetup create --concise \"$(parse-android-dynparts /dev/disk/by-partlabel/super)\"");
+    system(cmd);
+
+    mkdir("/system_mnt", 0755);
+    result = mount("/dev/mapper/dynpart-system_a", "/system_mnt", "ext4", 0, NULL);
+    if (result != 0) {
+        printf("Failed to mount dynpart-system_a\n");
+        return -1;
+    }
+
+    snprintf(cmd, sizeof(cmd), "zstd -f -d /system_mnt/userdata-raw.img.zst -o /userdata-raw.img");
+    result = system(cmd);
+    if (result != 0) {
+        printf("Failed to unpack userdata-raw.img.zst\n");
+        umount("/system_mnt");
+        return -1;
+    }
+
+    snprintf(cmd, sizeof(cmd), "dd if=/userdata-raw.img of=/dev/disk/by-partlabel/userdata");
+    result = system(cmd);
+    if (result != 0) {
+        printf("Failed to write userdata\n");
+        umount("/system_mnt");
+        return -1;
+    }
+
+    umount("/system_mnt");
+
+    return 0;
 }
 
 static void decrypt(void) {
@@ -475,6 +568,8 @@ static void decrypt(void) {
         ul_log(UL_LOG_LEVEL_ERROR, "Unable to find suitable backend");
         exit(EXIT_FAILURE);
     }
+
+    is_keyboard_hidden = false;
 
     /* Prevent scrolling when keyboard is off-screen */
     lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
@@ -565,7 +660,6 @@ static void decrypt(void) {
     lv_keyboard_set_textarea(keyboard, textarea);
     lv_obj_remove_event_cb(keyboard, lv_keyboard_def_event_cb);
     lv_obj_add_event_cb(keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_add_event_cb(keyboard, keyboard_ready_cb, LV_EVENT_READY, NULL);
     lv_obj_set_pos(keyboard, 0, is_keyboard_hidden ? keyboard_height : 0);
     lv_obj_set_size(keyboard, hor_res, keyboard_height);
     ul_theme_prepare_keyboard(keyboard);

@@ -69,7 +69,7 @@ int is_lv_encrypted_with_luks(const char *device_path, size_t print_bytes) {
 
     close(fd);
     free(buffer);
-
+//    printf("Encryption check result: %d\n", result);
     return result;
 }
 
@@ -79,25 +79,25 @@ int mount_luks_lvm(const char *passphrase) {
 
     result = crypt_init(&cd, DEVICE);
     if (result < 0) {
-        //fprintf(stderr, "crypt_init() failed: %s\n", strerror(-result));
+        fprintf(stderr, "crypt_init() failed: %s\n", strerror(-result));
         return EXIT_FAILURE;
     }
 
     // Load the LUKS header from the given header device.
     if (result < 0) {
-        //fprintf(stderr, "crypt_load() failed: %s\n", strerror(-result));
+        fprintf(stderr, "crypt_load() failed: %s\n", strerror(-result));
         crypt_free(cd);
         return EXIT_FAILURE;
     }
 
     result = crypt_activate_by_passphrase(cd, NAME, CRYPT_ANY_SLOT, passphrase, strlen(passphrase), 0);
     if (result < 0) {
-        //fprintf(stderr, "Activation failed: Incorrect passphrase or other error.\n");
+        fprintf(stderr, "Activation failed: Incorrect passphrase or other error.\n");
         crypt_free(cd);
         return 2;
     }
 
-    //printf("LUKS device %s activated successfully.\n", NAME);
+    printf("LUKS device %s activated successfully.\n", NAME);
 
     crypt_free(cd);
 
