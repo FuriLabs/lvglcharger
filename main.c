@@ -54,6 +54,8 @@
 
 #include <sys/reboot.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define NUM_IMAGES 1
 
@@ -508,16 +510,36 @@ static void factory_reset_password(lv_timer_t *timer) {
 static int factory_reset(void) {
     // the reason most things here are system calls is because our ramdisk must be small and more libraries we link against the bigger the binary will get
     // here, we're using pre existing binaries in the ramdisk to not take too much storage in the ramdisk
-    char cmd[256];
+    struct stat buffer;
     int result;
+    char cmd[256];
 
-    snprintf(cmd, sizeof(cmd), "dmsetup create --concise \"$(parse-android-dynparts /dev/disk/by-partlabel/super)\"");
-    system(cmd);
+    if (stat("/dev/disk/by-partlabel/super", &buffer) == 0) {
+        // if system_a doesn't exist
+        if (stat("/dev/mapper/dynpart-system_a", &buffer) != 0) {
+            // if system_b doesn't exist
+            if (stat("/dev/mapper/dynpart-system_b", &buffer) != 0) {
+                snprintf(cmd, sizeof(cmd), "dmsetup create --concise \"$(parse-android-dynparts /dev/disk/by-partlabel/super)\"");
+                system(cmd);
+            }
+        }
+    }
 
     mkdir("/system_mnt", 0755);
-    result = mount("/dev/mapper/dynpart-system_a", "/system_mnt", "ext4", 0, NULL);
-    if (result != 0) {
-        printf("Failed to mount dynpart-system_a\n");
+    if (stat("/dev/mapper/dynpart-system_a", &buffer) == 0) {
+        result = mount("/dev/mapper/dynpart-system_a", "/system_mnt", "ext4", 0, NULL);
+        if (result != 0) {
+            printf("Failed to mount dynpart-system_a\n");
+            return -1;
+        }
+    } else if (stat("/dev/mapper/dynpart-system_b", &buffer) == 0) {
+        result = mount("/dev/mapper/dynpart-system_b", "/system_mnt", "ext4", 0, NULL);
+        if (result != 0) {
+            printf("Failed to mount dynpart-system_b\n");
+            return -1;
+        }
+    } else {
+        printf("Failed to mount dynpart-system, block device doesn't not exist\n");
         return -1;
     }
 
