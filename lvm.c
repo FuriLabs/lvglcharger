@@ -23,19 +23,28 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <libcryptsetup.h>
 
 #define LUKS_MAGIC "LUKS\xba\xbe"
 #define LUKS_MAGIC_LEN 6
 #define DEVICE "/dev/droidian/droidian-rootfs"
 #define HEADER "/dev/droidian/droidian-reserved"
-#define NAME "/dev/mapper/droidian_encrypted"
+#define DECRYPTED "/dev/mapper/droidian_encrypted"
+#define NAME "droidian_encrypted"
 #define PASSPHRASE_MAX 256
 
 int is_lv_encrypted_with_luks(const char *device_path, size_t print_bytes) {
     int fd, result;
     unsigned char *buffer;
     ssize_t read_bytes;
+
+    struct stat st;
+
+    if (stat(DECRYPTED, &st) == 0) {
+        // DECRYPTED device exists, return as unencrypted
+        return 0;
+    }
 
     fd = open(device_path, O_RDONLY);
     if (fd == -1) {
