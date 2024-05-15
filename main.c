@@ -563,10 +563,10 @@ static int factory_reset(void) {
     }
 
     if (stat("/userdata-raw.img", &buffer) == 0) {
-        snprintf(cmd, sizeof(cmd), "dd if=/userdata-raw.img of=/dev/disk/by-partlabel/userdata");
+        snprintf(cmd, sizeof(cmd), "dd if=/userdata-raw.img of=/dev/disk/by-partlabel/userdata bs=4M");
     } else {
         if (stat("/userdata.img", &buffer) == 0) {
-            snprintf(cmd, sizeof(cmd), "dd if=/userdata.img of=/dev/disk/by-partlabel/userdata");
+            snprintf(cmd, sizeof(cmd), "dd if=/userdata.img of=/dev/disk/by-partlabel/userdata bs=4M");
         } else {
             printf("Failed to find extracted userdata image\n");
             umount("/system_mnt");
