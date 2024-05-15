@@ -392,11 +392,10 @@ static void factory_reset_mbox_value_changed_cb(lv_event_t *event) {
 
 static void perform_factory_reset(lv_timer_t *timer) {
     lv_obj_t *resetting_mbox = (lv_obj_t *)timer->user_data;
-    const char *lvm_device_path = "/dev/droidian/droidian-persistent";
+    const char *lvm_device_path = "/dev/droidian/droidian-reserved";
     size_t print_bytes = 64;
     int result = is_lv_encrypted_with_luks(lvm_device_path, print_bytes);
 
-    result = 1;
     if (result == -1) {
         // rootfs.img in data? well we can't reset that for now
         lv_msgbox_close(resetting_mbox);
