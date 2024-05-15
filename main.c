@@ -543,15 +543,37 @@ static int factory_reset(void) {
         return -1;
     }
 
-    snprintf(cmd, sizeof(cmd), "zstd -f -d /system_mnt/userdata-raw.img.zst -o /userdata-raw.img");
+    if (stat("/system_mnt/userdata.img.tar.gz", &buffer) == 0) {
+        snprintf(cmd, sizeof(cmd), "tar -xzvf /system_mnt/userdata.img.tar.gz");
+    } else {
+        if (stat("/system_mnt/userdata-raw.img.tar.gz", &buffer) == 0) {
+            snprintf(cmd, sizeof(cmd), "tar -xzvf /system_mnt/userdata-raw.img.tar.gz");
+        } else {
+            printf("Failed to find userdata archive\n");
+            umount("/system_mnt");
+            return -1;
+        }
+    }
+
     result = system(cmd);
     if (result != 0) {
-        printf("Failed to unpack userdata-raw.img.zst\n");
+        printf("Failed to unpack userdata in system\n");
         umount("/system_mnt");
         return -1;
     }
 
-    snprintf(cmd, sizeof(cmd), "dd if=/userdata-raw.img of=/dev/disk/by-partlabel/userdata");
+    if (stat("/userdata-raw.img", &buffer) == 0) {
+        snprintf(cmd, sizeof(cmd), "dd if=/userdata-raw.img of=/dev/disk/by-partlabel/userdata");
+    } else {
+        if (stat("/userdata.img", &buffer) == 0) {
+            snprintf(cmd, sizeof(cmd), "dd if=/userdata.img of=/dev/disk/by-partlabel/userdata");
+        } else {
+            printf("Failed to find extracted userdata image\n");
+            umount("/system_mnt");
+            return -1;
+        }
+    }
+
     result = system(cmd);
     if (result != 0) {
         printf("Failed to write userdata\n");
