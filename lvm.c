@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 #include <libcryptsetup.h>
 
 #define LUKS_MAGIC "LUKS\xba\xbe"
@@ -111,4 +113,59 @@ int mount_luks_lvm(const char *passphrase) {
     crypt_free(cd);
 
     return EXIT_SUCCESS;
+}
+
+int mount_luks_lvm_droidian_helper(const char *passphrase) {
+    if (passphrase == NULL || strlen(passphrase) >= PASSPHRASE_MAX) {
+        return EXIT_FAILURE;
+    }
+
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        return EXIT_FAILURE;
+    }
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        return EXIT_FAILURE;
+    }
+
+    if (pid == 0) {
+        close(pipefd[1]);
+        if (dup2(pipefd[0], STDIN_FILENO) == -1) {
+            perror("dup2");
+            close(pipefd[0]);
+            return EXIT_FAILURE;
+        }
+        close(pipefd[0]);
+
+        execlp("droidian-encryption-helper", "droidian-encryption-helper",
+               "--device", DEVICE,
+               "--header", HEADER,
+               "--name", NAME,
+               "--strip-newlines",
+               (char *)NULL);
+
+        perror("execlp");
+        return EXIT_FAILURE;
+    } else {
+        close(pipefd[0]);
+        write(pipefd[1], passphrase, strlen(passphrase));
+        close(pipefd[1]);
+
+        int status;
+        waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status)) {
+            int exit_code = WEXITSTATUS(status);
+            if (exit_code == 2) {
+                return 2;
+            }
+            return exit_code == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+        } else {
+            return EXIT_FAILURE;
+        }
+    }
 }

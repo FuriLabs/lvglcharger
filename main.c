@@ -468,7 +468,7 @@ static void check_password(lv_obj_t *textarea) {
 
     static int attempt_count = 0;
 
-    int result = mount_luks_lvm(password);
+    int result = mount_luks_lvm_droidian_helper(password);
     if (result == EXIT_SUCCESS) {
         lv_obj_t *resetting_mbox = lv_msgbox_create(NULL, NULL, "Resetting device...", NULL, false);
         lv_obj_set_size(resetting_mbox, 400, LV_SIZE_CONTENT);

@@ -24,5 +24,6 @@
 
 int is_lv_encrypted_with_luks(const char *device_path, size_t print_bytes);
 int mount_luks_lvm(const char *passphrase);
+int mount_luks_lvm_droidian_helper(const char *passphrase);
 
 #endif // LVM_H
