@@ -73,6 +73,11 @@ bool is_keyboard_hidden = true;
 lv_obj_t *keyboard = NULL;
 lv_obj_t *ip_label_container = NULL;
 lv_obj_t *ip_label = NULL;
+lv_obj_t *reboot_btn;
+lv_obj_t *shutdown_btn;
+lv_obj_t *factory_reset_btn;
+lv_obj_t *theme_btn;
+lv_obj_t *ssh_btn;
 
 LV_IMG_DECLARE(furilabs_white)
 LV_IMG_DECLARE(furilabs_black)
@@ -632,6 +637,13 @@ static void decrypt(void) {
     const int label_width = hor_res - 2 * padding;
     const int textarea_container_max_width = LV_MIN(hor_res, ver_res);
 
+    /* Hide everything from the main window */
+    lv_obj_add_flag(reboot_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(shutdown_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(factory_reset_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(theme_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ssh_btn, LV_OBJ_FLAG_HIDDEN);
+
     /* Main flexbox */
     lv_obj_t *container = lv_obj_create(lv_scr_act());
     lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
@@ -914,7 +926,7 @@ int main(int argc, char *argv[]) {
     update_image_mode(is_alternate_theme);
 
     /* Reboot button */
-    lv_obj_t *reboot_btn = lv_btn_create(label_container);
+    reboot_btn = lv_btn_create(label_container);
     lv_obj_set_width(reboot_btn, LV_PCT(100));
     lv_obj_set_height(reboot_btn, 100);
     lv_obj_t *reboot_btn_label = lv_label_create(reboot_btn);
@@ -924,19 +936,19 @@ int main(int argc, char *argv[]) {
     lv_obj_set_flex_flow(reboot_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(reboot_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    /* Shutdown middle button */
-    lv_obj_t *shutdown_middle_btn = lv_btn_create(label_container);
-    lv_obj_set_width(shutdown_middle_btn, LV_PCT(100));
-    lv_obj_set_height(shutdown_middle_btn, 100);
-    lv_obj_t *shutdown_middle_btn_label = lv_label_create(shutdown_middle_btn);
-    lv_label_set_text(shutdown_middle_btn_label, "Shutdown");
-    lv_obj_add_event_cb(shutdown_middle_btn, shutdown_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(shutdown_middle_btn, LV_ALIGN_TOP_MID, 0, 600);
-    lv_obj_set_flex_flow(shutdown_middle_btn, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(shutdown_middle_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    /* Shutdown button */
+    shutdown_btn = lv_btn_create(label_container);
+    lv_obj_set_width(shutdown_btn, LV_PCT(100));
+    lv_obj_set_height(shutdown_btn, 100);
+    lv_obj_t *shutdown_btn_label = lv_label_create(shutdown_btn);
+    lv_label_set_text(shutdown_btn_label, "Shutdown");
+    lv_obj_add_event_cb(shutdown_btn, shutdown_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_align(shutdown_btn, LV_ALIGN_TOP_MID, 0, 600);
+    lv_obj_set_flex_flow(shutdown_btn, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(shutdown_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     /* Factory reset button */
-    lv_obj_t *factory_reset_btn = lv_btn_create(label_container);
+    factory_reset_btn = lv_btn_create(label_container);
     lv_obj_set_width(factory_reset_btn, LV_PCT(100));
     lv_obj_set_height(factory_reset_btn, 100);
     lv_obj_t *factory_reset_btn_label = lv_label_create(factory_reset_btn);
@@ -946,8 +958,8 @@ int main(int argc, char *argv[]) {
     lv_obj_set_flex_flow(factory_reset_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(factory_reset_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    /* theme button */
-    lv_obj_t *theme_btn = lv_btn_create(label_container);
+    /* Theme button */
+    theme_btn = lv_btn_create(label_container);
     lv_obj_set_width(theme_btn, LV_PCT(100));
     lv_obj_set_height(theme_btn, 100);
     lv_obj_t *theme_btn_label = lv_label_create(theme_btn);
@@ -957,8 +969,8 @@ int main(int argc, char *argv[]) {
     lv_obj_set_flex_flow(theme_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(theme_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    /* ssh button */
-    lv_obj_t *ssh_btn = lv_btn_create(label_container);
+    /* SSH button */
+    ssh_btn = lv_btn_create(label_container);
     lv_obj_set_width(ssh_btn, LV_PCT(100));
     lv_obj_set_height(ssh_btn, 100);
     lv_obj_t *ssh_btn_label = lv_label_create(ssh_btn);
