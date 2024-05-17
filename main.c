@@ -78,6 +78,7 @@ lv_obj_t *shutdown_btn;
 lv_obj_t *factory_reset_btn;
 lv_obj_t *theme_btn;
 lv_obj_t *ssh_btn;
+lv_obj_t *ssh_btn_label;
 
 LV_IMG_DECLARE(furilabs_white)
 LV_IMG_DECLARE(furilabs_black)
@@ -758,6 +759,7 @@ static void toggle_ssh_btn_clicked_cb(lv_event_t *event) {
             if (ip_label_container != NULL) {
                 lv_obj_add_flag(ip_label_container, LV_OBJ_FLAG_HIDDEN);
             }
+            lv_label_set_text(ssh_btn_label, "Enable SSH");
         }
     } else {
         if (stat("/scripts/enable-ssh.sh", &buffer) == 0) {
@@ -777,6 +779,7 @@ static void toggle_ssh_btn_clicked_cb(lv_event_t *event) {
             } else {
                 lv_obj_clear_flag(ip_label_container, LV_OBJ_FLAG_HIDDEN);
             }
+            lv_label_set_text(ssh_btn_label, "Disable SSH");
         }
     }
 }
@@ -973,8 +976,15 @@ int main(int argc, char *argv[]) {
     ssh_btn = lv_btn_create(label_container);
     lv_obj_set_width(ssh_btn, LV_PCT(100));
     lv_obj_set_height(ssh_btn, 100);
-    lv_obj_t *ssh_btn_label = lv_label_create(ssh_btn);
-    lv_label_set_text(ssh_btn_label, "Toggle SSH");
+    ssh_btn_label = lv_label_create(ssh_btn);
+
+    struct stat buffer;
+    if (stat("/tmp/dropbear-enabled", &buffer) == 0) {
+        lv_label_set_text(ssh_btn_label, "Disable SSH");
+    } else {
+        lv_label_set_text(ssh_btn_label, "Enable SSH");
+    }
+
     lv_obj_add_event_cb(ssh_btn, toggle_ssh_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_align(ssh_btn, LV_ALIGN_TOP_MID, 0, 900);
     lv_obj_set_flex_flow(ssh_btn, LV_FLEX_FLOW_COLUMN);
