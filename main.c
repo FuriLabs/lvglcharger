@@ -71,6 +71,8 @@ bool is_password_obscured = true;
 bool is_keyboard_hidden = true;
 
 lv_obj_t *keyboard = NULL;
+lv_obj_t *ip_label_container = NULL;
+lv_obj_t *ip_label = NULL;
 
 LV_IMG_DECLARE(furilabs_white)
 LV_IMG_DECLARE(furilabs_black)
@@ -93,6 +95,13 @@ lv_obj_t* images[1];
  * @param event the event object
  */
 static void toggle_theme_btn_clicked_cb(lv_event_t *event);
+
+/**
+ * Handle LV_EVENT_CLICKED events from the ssh toggle button.
+ *
+ * @param event the event object
+ */
+static void toggle_ssh_btn_clicked_cb(lv_event_t *event);
 
 /**
  * Toggle between the light and dark theme.
@@ -727,6 +736,39 @@ static void sigaction_handler(int signum) {
     exit(0);
 }
 
+static void toggle_ssh_btn_clicked_cb(lv_event_t *event) {
+    LV_UNUSED(event);
+    struct stat buffer;
+
+    if (stat("/tmp/dropbear-enabled", &buffer) == 0) {
+        if (stat("/scripts/enable-ssh.sh", &buffer) == 0) {
+            system("/scripts/enable-ssh.sh 0");
+            if (ip_label_container != NULL) {
+                lv_obj_add_flag(ip_label_container, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    } else {
+        if (stat("/scripts/enable-ssh.sh", &buffer) == 0) {
+            system("/scripts/enable-ssh.sh 1");
+
+            if (ip_label_container == NULL) {
+                /* IP Address label container */
+                ip_label_container = lv_obj_create(lv_scr_act());
+                lv_obj_set_width(ip_label_container, LV_PCT(100));
+                lv_obj_set_height(ip_label_container, LV_SIZE_CONTENT);
+                lv_obj_align(ip_label_container, LV_ALIGN_BOTTOM_MID, 0, -50);
+
+                /* IP Address label text */
+                ip_label = lv_label_create(ip_label_container);
+                lv_label_set_text(ip_label, "IP Address: 192.168.2.15");
+                lv_obj_align(ip_label, LV_ALIGN_BOTTOM_MID, 0, 0);
+            } else {
+                lv_obj_clear_flag(ip_label_container, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+}
+
 /**
  * Main
  */
@@ -850,14 +892,14 @@ int main(int argc, char *argv[]) {
     lv_obj_set_size(label_container, label_width, LV_PCT(100));
     lv_obj_set_flex_grow(label_container, 1);
 
-    /* Top label */
-    lv_obj_t *top_label_container = lv_obj_create(lv_scr_act());
-    lv_obj_set_width(top_label_container, LV_PCT(100));
-    lv_obj_set_height(top_label_container, LV_SIZE_CONTENT);
-    lv_obj_set_align(top_label_container, LV_ALIGN_BOTTOM_MID);
+    /* FuriOS label container */
+    lv_obj_t *furios_label_container = lv_obj_create(lv_scr_act());
+    lv_obj_set_width(furios_label_container, LV_PCT(100));
+    lv_obj_set_height(furios_label_container, LV_SIZE_CONTENT);
+    lv_obj_set_align(furios_label_container, LV_ALIGN_BOTTOM_MID);
 
-    /* Top label text */
-    lv_obj_t *furios_label = lv_label_create(top_label_container);
+    /* FuriOS label text */
+    lv_obj_t *furios_label = lv_label_create(furios_label_container);
     lv_label_set_text(furios_label, "FuriOS Recovery");
     lv_obj_align(furios_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
@@ -865,9 +907,9 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < NUM_IMAGES; i++)
         images[i] = lv_img_create(lv_scr_act());
 
-    /* Furilabs logo */
+    /* Furi Labs logo */
     lv_obj_align(images[0], LV_ALIGN_TOP_MID, 0, 100);
-    
+
     /* Set image mode */
     update_image_mode(is_alternate_theme);
 
@@ -914,6 +956,17 @@ int main(int argc, char *argv[]) {
     lv_obj_align(theme_btn, LV_ALIGN_TOP_MID, 0, 800);
     lv_obj_set_flex_flow(theme_btn, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(theme_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    /* ssh button */
+    lv_obj_t *ssh_btn = lv_btn_create(label_container);
+    lv_obj_set_width(ssh_btn, LV_PCT(100));
+    lv_obj_set_height(ssh_btn, 100);
+    lv_obj_t *ssh_btn_label = lv_label_create(ssh_btn);
+    lv_label_set_text(ssh_btn_label, "Toggle SSH");
+    lv_obj_add_event_cb(ssh_btn, toggle_ssh_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_align(ssh_btn, LV_ALIGN_TOP_MID, 0, 900);
+    lv_obj_set_flex_flow(ssh_btn, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(ssh_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
