@@ -1,7 +1,7 @@
 /**
  * Copyright 2021 Johannes Marbach
  *
- * This file is part of furios-recovery, hereafter referred to as the program.
+ * This file is part of lvglcharger, hereafter referred to as the program.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,7 @@
 #define UL_CONFIG_H
 
 #include "backends.h"
-
 #include "themes.h"
-
-#include "sq2lv_layouts.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -43,28 +40,6 @@ typedef struct {
 } ul_config_opts_general;
 
 /**
- * Options related to the keyboard
- */
-typedef struct {
-    /* If true, hide the keyboard on launch when a hardware keyboard is connected */
-    bool autohide;
-    /* Keyboard layout */
-    sq2lv_layout_id_t layout_id;
-    /* If true, display key popovers on press */
-    bool popovers;
-} ul_config_opts_keyboard;
-
-/**
- * Options related to the password textarea
- */
-typedef struct {
-    /* If true, disguise the entered text with dots */
-    bool obscured;
-    /* The character to use for disguising the entered text */
-    const char *bullet;
-} ul_config_opts_textarea;
-
-/**
  * Options related to the theme
  */
 typedef struct {
@@ -75,31 +50,13 @@ typedef struct {
 } ul_config_opts_theme;
 
 /**
- * Options related to input devices
- */
-typedef struct {
-    /* If true and a keyboard device is connected, use it for input */
-    bool keyboard;
-    /* If true and a pointer device is connected, use it for input */
-    bool pointer;
-    /* If true and a touchscreen device is connected, use it for input */
-    bool touchscreen;
-} ul_config_opts_input;
-
-/**
  * Options parsed from config file(s)
  */
 typedef struct {
     /* General options */
     ul_config_opts_general general;
-    /* Options related to the keyboard */
-    ul_config_opts_keyboard keyboard;
-    /* Options related to the password textarea */
-    ul_config_opts_textarea textarea;
     /* Options related to the theme */
     ul_config_opts_theme theme;
-    /* Options related to input devices */
-    ul_config_opts_input input;
 } ul_config_opts;
 
 /**

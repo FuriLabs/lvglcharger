@@ -1,7 +1,7 @@
 /**
  * Copyright 2021 Johannes Marbach
  *
- * This file is part of furios-recovery, hereafter referred to as the program.
+ * This file is part of lvglcharger, hereafter referred to as the program.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,9 +26,6 @@
 
 #include <ini.h>
 #include <stdlib.h>
-
-#include "squeek2lvgl/sq2lv.h"
-
 
 /**
  * Static prototypes
@@ -77,17 +74,9 @@ static bool parse_bool(const char *value, bool *result);
 static void init_opts(ul_config_opts *opts) {
     opts->general.animations = false;
     opts->general.backend = ul_backends_backends[0] == NULL ? UL_BACKENDS_BACKEND_NONE : 0;
-    opts->general.timeout = 0;
-    opts->keyboard.autohide = true;
-    opts->keyboard.layout_id = SQ2LV_LAYOUT_US;
-    opts->keyboard.popovers = false;
-    opts->textarea.obscured = true;
-    opts->textarea.bullet = LV_SYMBOL_BULLET;
     opts->theme.default_id = UL_THEMES_THEME_BREEZY_DARK;
     opts->theme.alternate_id = UL_THEMES_THEME_BREEZY_LIGHT;
-    opts->input.keyboard = true;
-    opts->input.pointer = true;
-    opts->input.touchscreen = true;
+    opts->general.timeout = 0;
 }
 
 static void parse_file(const char *path, ul_config_opts *opts) {
@@ -115,34 +104,6 @@ static int parsing_handler(void* user_data, const char* section, const char* key
             opts->general.timeout = (uint16_t)LV_MIN(strtoul(value, (char **)NULL, 10), 3600);
             return 1;
         }
-    } else if (strcmp(section, "keyboard") == 0) {
-        if (strcmp(key, "autohide") == 0) {
-            if (parse_bool(value, &(opts->keyboard.autohide))) {
-                return 1;
-            }
-        } else if (strcmp(key, "layout") == 0) {
-            sq2lv_layout_id_t id = sq2lv_find_layout_with_short_name(value);
-            if (id != SQ2LV_LAYOUT_NONE) {
-                opts->keyboard.layout_id = id;
-                return 1;
-            }
-        } else if (strcmp(key, "popovers") == 0) {
-            if (parse_bool(value, &(opts->keyboard.popovers))) {
-                return 1;
-            }
-        }
-    } else if (strcmp(section, "textarea") == 0) {
-        if (strcmp(key, "obscured") == 0) {
-            if (parse_bool(value, &(opts->textarea.obscured))) {
-                return 1;
-            }
-        } else if (strcmp(key, "bullet") == 0) {
-            char *bullet = strdup(value);
-            if (bullet) {
-                opts->textarea.bullet = bullet;
-                return 1;
-            }
-        }
     } else if (strcmp(section, "theme") == 0) {
         if (strcmp(key, "default") == 0) {
             ul_themes_theme_id_t id = ul_themes_find_theme_with_name(value);
@@ -154,20 +115,6 @@ static int parsing_handler(void* user_data, const char* section, const char* key
             ul_themes_theme_id_t id = ul_themes_find_theme_with_name(value);
             if (id != UL_THEMES_THEME_NONE) {
                 opts->theme.alternate_id = id;
-                return 1;
-            }
-        }
-    } else if (strcmp(section, "input") == 0) {
-        if (strcmp(key, "keyboard") == 0) {
-            if (parse_bool(value, &(opts->input.keyboard))) {
-                return 1;
-            }
-        } else if (strcmp(key, "pointer") == 0) {
-            if (parse_bool(value, &(opts->input.pointer))) {
-                return 1;
-            }
-        } else if (strcmp(key, "touchscreen") == 0) {
-            if (parse_bool(value, &(opts->input.touchscreen))) {
                 return 1;
             }
         }

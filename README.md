@@ -1,4 +1,4 @@
-FuriOS Recovery
+LVGL charger
 ===============
 
 Recovery project for the initramfs based on [LVGL].
@@ -6,12 +6,12 @@ Recovery project for the initramfs based on [LVGL].
 # Usage
 
 ```
-$ furios-recovery --help
-Usage: furios-recovery [OPTION]
+$ lvglcharger --help
+Usage: lvglcharger [OPTION]
 
 Mandatory arguments to long options are mandatory for short options too.
   -c, --config=PATH      Locaton of the main config file. Defaults to
-                         /etc/furios-recovery.conf.
+                         /etc/lvglcharger.conf.
   -C, --config-override  Location of the config override file. Values in
                          this file override values for the same keys in the
                          main config file. If specified multiple times, the
@@ -22,10 +22,10 @@ Mandatory arguments to long options are mandatory for short options too.
   -d  --dpi=N            Overrides the DPI
   -h, --help             Print this message and exit
   -v, --verbose          Enable more detailed logging output on STDERR
-  -V, --version          Print the furios-recovery version and exit
+  -V, --version          Print the lvglcharger version and exit
 ```
 
-For an example configuration file, see [furios-recovery].
+For an example configuration file, see [lvglcharger].
 
 # Development
 
@@ -34,7 +34,6 @@ For an example configuration file, see [furios-recovery].
 - [inih]
 - [lvgl] (git submodule / linked statically)
 - [lv_drivers] (git submodule / linked statically)
-- [squeek2lvgl] (git submodule / linked statically)
 - [libinput]
 - [libxkbcommon]
 - [libdrm] (optional, required for the DRM backend)
@@ -42,11 +41,11 @@ For an example configuration file, see [furios-recovery].
 
 ## Building & running
 
-Some of FuriOS Recovery's dependencies are included as git submodules in this repository. You can clone the repository and initialise the submodules with
+Some of LVGL charger's dependencies are included as git submodules in this repository. You can clone the repository and initialise the submodules with
 
 ```
-$ git clone https://github.com/furilabs/furios-recovery.git
-$ cd furios-recovery
+$ git clone https://github.com/furilabs/lvglcharger.git
+$ cd lvglcharger
 $ git submodule init
 $ git submodule update
 ```
@@ -59,7 +58,7 @@ Once you have the sources, you can build the app and run it in a VT. Unless your
 $ meson _build
 $ meson compile -C _build
 $ sudo chvt 2
-$ sudo ./_build/furios-recovery
+$ sudo ./_build/lvglcharger
 ```
 
 With meson <0\.55 use `ninja` instead of `meson compile`\.
@@ -77,7 +76,7 @@ will forcibly disable the DRM backend regardless if libdrm is installed or not.
 
 ## Backends
 
-FuriOS Recovery supports multiple lvgl display drivers, which are herein referred as "backends".
+LVGL Charger supports multiple lvgl display drivers, which are herein referred as "backends".
 
 Currently supported backends:
 
@@ -89,7 +88,7 @@ The backend can be switched at runtime by modifying the `general.backend` config
 
 ## Fonts
 
-In order to work with [LVGL], fonts need to be converted to bitmaps, stored as C arrays. FuriOS Recovery currently uses a combination of the [OpenSans] font for text and the [FontAwesome] font for pictograms. For both fonts only limited character ranges are included to reduce the binary size. To (re)generate the C file containing the combined font, run the following command
+In order to work with [LVGL], fonts need to be converted to bitmaps, stored as C arrays. LVGL charger currently uses a combination of the [OpenSans] font for text and the [FontAwesome] font for pictograms. For both fonts only limited character ranges are included to reduce the binary size. To (re)generate the C file containing the combined font, run the following command
 
 ```
 $ ./regenerate-fonts.sh
@@ -110,53 +109,3 @@ Below is a short explanation of the different unicode ranges used above.
   - [adjust](https://fontawesome.com/v5/icons/adjust) (`0xF042`)
   - [arrow-alt-circle-up](https://fontawesome.com/v5/icons/arrow-alt-circle-up) (`0xF35B`)
   - [chevron-left](https://fontawesome.com/v5/icons/chevron-left) (`0xF053`)
-
-## Keyboard layouts
-
-FuriOS Recovery uses [squeekboard layouts] converted to C via [squeek2lvgl]. To regenerate the layouts, ensure that you have pipenv installed (e.g. via `pip install --user pipenv`) and then run
-
-```
-$ ./regenerate-layouts.sh
-```
-
-from the root of the repository.
-
-# License
-
-FuriOS Recovery is licensed under the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-The [OpenSans] font is licensed under the Apache License 2.0.
-
-The [FontAwesome] font is licensed under the Open Font License version 1.1.
-
-[Add full keyboard support to libinput/evdev driver]: https://github.com/lvgl/lv_drivers/pull/156
-[Add support for keypads to libinput driver]: https://github.com/lvgl/lv_drivers/pull/152
-[Add support for pointer devices to libinput driver]: https://github.com/lvgl/lv_drivers/pull/150
-[Automatic device discovery via libinput]: https://github.com/lvgl/lv_drivers/pull/157
-[FontAwesome]: https://fontawesome.com
-[LVGL]: https://lvgl.io
-[Make it possible to use multiple devices with the libinput and XKB drivers]: https://github.com/lvgl/lv_drivers/pull/165
-[OpenSans]: https://fonts.google.com/specimen/Open+Sans
-[Use LV_LOG instead of printf in fbdev driver]: https://github.com/lvgl/lv_drivers/pull/167
-[adjust]: https://fontawesome.com/v5.15/icons/adjust?style=solid
-[arrow-alt-circle-up]: https://fontawesome.com/v5.15/icons/arrow-alt-circle-up?style=solid
-[feat(btnmatrix): add option to show popovers on button press]: https://github.com/lvgl/lvgl/pull/2537
-[feat(msgbox): add function to get selected button index]: https://github.com/lvgl/lvgl/pull/2538
-[feat(msgbox): omit title label unless needed]: https://github.com/lvgl/lvgl/pull/2539
-[fix(btnmatrix): make ORed values work correctly with lv_btnmatrix_has_btn_ctrl]: https://github.com/lvgl/lvgl/pull/2571
-[fix(examples) don't compile assets unless needed]: https://github.com/lvgl/lvgl/pull/2523
-[inih]: https://github.com/benhoyt/inih
-[libinput]: https://gitlab.freedesktop.org/libinput/libinput
-[libxkbcommon]: https://github.com/xkbcommon/libxkbcommon
-[libdrm]: https://gitlab.freedesktop.org/mesa/drm
-[lv_drivers]: https://github.com/lvgl/lv_drivers
-[lv_port_linux_frame_buffer]: https://github.com/lvgl/lv_port_linux_frame_buffer
-[lv_sim_emscripten]: https://github.com/lvgl/lv_sim_emscripten/blob/master/mouse_cursor_icon.c
-[lvgl]: https://github.com/lvgl/lvgl
-[online font converter]: https://lvgl.io/tools/fontconverter
-[open issues]: https://github.com/furilabs/furios-recovery/-/issues
-[osk-sdl]: https://gitlab.com/postmarketOS/osk-sdl
-[screenshots]: ./screenshots
-[squeek2lvgl]: https://gitlab.com/cherrypicker/squeek2lvgl
-[squeekboard layouts]: https://gitlab.gnome.org/World/Phosh/squeekboard/-/tree/master/data/keyboards
-[furios-recovery.conf]: ./furios-recovery.conf

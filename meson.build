@@ -1,6 +1,6 @@
 # Copyright 2021 Clayton Craft
 #
-# This file is part of furios-recovery, hereafter referred to as the program.
+# This file is part of lvglcharger, hereafter referred to as the program.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 
 project(
-  'furios-recovery',
+  'lvglcharger',
   'c',
   version: '0.1.0',
   default_options: 'warning_level=3',
@@ -28,29 +28,19 @@ add_project_arguments('-DUL_VERSION="@0@"'.format(meson.project_version()), lang
 
 enable_static = (get_option('default_library') == 'static')
 
-furios_recovery_sources = [
+lvglcharger_sources = [
   'backends.c',
   'command_line.c',
   'config.c',
-  'cursor.c',
   'font_32.c',
-  'indev.c',
   'log.c',
   'main.c',
-  'sq2lv_layouts.c',
   'terminal.c',
-  'theme.c',
   'themes.c',
-  'lvm.c',
-  'images/furilabs_black.c',
-  'images/furilabs_white.c',
+  'theme.c'
 ]
 
-squeek2lvgl_sources = [
-  'squeek2lvgl/sq2lv.c',
-]
-
-furios_recovery_dependencies = [
+lvglcharger_dependencies = [
   dependency('inih', static: enable_static),
   dependency('libinput', static: enable_static),
   dependency('xkbcommon', static: enable_static),
@@ -61,13 +51,13 @@ cc = meson.get_compiler('c')
 
 libdrm_dep = dependency('libdrm', required: get_option('with-drm'), static: enable_static)
 if libdrm_dep.found()
-  furios_recovery_dependencies += [libdrm_dep]
+  lvglcharger_dependencies += [libdrm_dep]
   add_project_arguments('-DUSE_DRM=1', language: ['c'])
 endif
 
 minui_dep = dependency('minui', required: get_option('with-minui'), static: enable_static)
 if minui_dep.found()
-  furios_recovery_dependencies += [
+  lvglcharger_dependencies += [
     minui_dep,
     cc.find_library('m', required : false, static: enable_static)
   ]
@@ -82,13 +72,13 @@ lvgl_sources = run_command('find-lvgl-sources.sh', 'lvgl', check: true).stdout()
 
 lv_drivers_sources = run_command('find-lvgl-sources.sh', 'lv_drivers', check: true).stdout().strip().split('\n')
 
-install_data(sources: 'furios-recovery.conf', install_dir : get_option('sysconfdir'))
+install_data(sources: 'lvglcharger.conf', install_dir : get_option('sysconfdir'))
 
 
 executable(
-  'furios-recovery',
-  sources: furios_recovery_sources + squeek2lvgl_sources + lvgl_sources + lv_drivers_sources,
+  'lvglcharger',
+  sources: lvglcharger_sources + lvgl_sources + lv_drivers_sources,
   include_directories: ['lvgl', 'lv_drivers'],
-  dependencies: furios_recovery_dependencies,
+  dependencies: lvglcharger_dependencies,
   install: true
 )

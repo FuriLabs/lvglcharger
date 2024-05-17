@@ -69,16 +69,6 @@ typedef struct {
     ul_theme_key key_mod_inact;
 } ul_theme_keys;
 
-/* Keyboard theme */
-typedef struct {
-    uint32_t bg_color;
-    lv_coord_t border_width;
-    uint32_t border_color;
-    lv_coord_t pad;
-    lv_coord_t gap;
-    ul_theme_keys keys;
-} ul_theme_keyboard;
-
 /* Button theme for one specific button state */
 typedef struct {
     uint32_t fg_color;
@@ -179,7 +169,6 @@ typedef struct {
     char *name;
     ul_theme_window window;
     ul_theme_header header;
-    ul_theme_keyboard keyboard;
     ul_theme_button button;
     ul_theme_textarea textarea;
     ul_theme_dropdown dropdown;
@@ -187,13 +176,6 @@ typedef struct {
     ul_theme_msgbox msgbox;
     ul_theme_bar bar;
 } ul_theme;
-
-/**
- * Prepare a keyboard widget to be themed with a theme.
- *
- * @param keyboard keyboard widget
- */
-void ul_theme_prepare_keyboard(lv_obj_t *keyboard);
 
 /**
  * Apply a UI theme.
