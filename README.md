@@ -34,8 +34,6 @@ For an example configuration file, see [lvglcharger].
 - [inih]
 - [lvgl] (git submodule / linked statically)
 - [lv_drivers] (git submodule / linked statically)
-- [libinput]
-- [libxkbcommon]
 - [libdrm] (optional, required for the DRM backend)
 - evdev kernel module
 
@@ -52,7 +50,7 @@ $ git submodule update
 
 When pulling changes from the remote later, either use `git pull --recurse-submodules` or manually run `git submodule update` as needed after pulling.
 
-Once you have the sources, you can build the app and run it in a VT. Unless your user account has special privileges, `sudo` will be needed to access input device files.
+Once you have the sources, you can build the app and run it in a VT.
 
 ```
 $ meson _build

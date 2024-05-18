@@ -386,7 +386,7 @@
  * Touchscreen as libinput interface (for Linux based systems)
  *------------------------------------------------*/
 #ifndef USE_LIBINPUT
-#  define USE_LIBINPUT           1
+#  define USE_LIBINPUT           0
 #endif
 
 #ifndef USE_BSD_LIBINPUT
@@ -427,7 +427,7 @@
  *------------------------------------------------*/
 #if USE_LIBINPUT || USE_BSD_LIBINPUT || USE_EVDEV || USE_BSD_EVDEV
 #  ifndef USE_XKB
-#    define USE_XKB           1
+#    define USE_XKB           0
 #  endif
 
 #  if USE_XKB
