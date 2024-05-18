@@ -56,6 +56,11 @@
  * Static variables
  */
 
+#define CMDLINE_FILE "/proc/cmdline"
+#define CHARGER_STRING "furi.bootreason=charger"
+#define BATTERY_CAPACITY "/sys/class/power_supply/battery/capacity"
+#define CHARGER_ONLINE "/sys/class/power_supply/charger/online"
+
 ul_cli_opts cli_opts;
 ul_config_opts conf_opts;
 
@@ -89,8 +94,27 @@ static int read_battery_capacity(void);
 
 /**
  * Update the battery level
+ *
+ * @param *arg is unused
  */
 static void *update_battery_level(void *arg);
+
+/**
+ * Check charger status, if device stopped charging, exit out
+ */
+static void check_charger_status();
+
+/**
+ * Check charger status repeatedly
+ *
+ * @param *arg is unused
+ */
+static void *check_charger(void* arg);
+
+/**
+ * Returns 0 if device is in charger mode
+ */
+static int bootreason_charger();
 
 /**
  * Static functions
@@ -107,7 +131,7 @@ static void sigaction_handler(int signum) {
 }
 
 static int read_battery_capacity(void) {
-    FILE *file = fopen("/sys/class/power_supply/battery/capacity", "r");
+    FILE *file = fopen(BATTERY_CAPACITY, "r");
     if (file == NULL) {
         perror("Failed to open capacity file");
         return -1;
@@ -167,11 +191,79 @@ static void *update_battery_level(void *arg) {
     return NULL;
 }
 
+static void check_charger_status() {
+    FILE* file = fopen(CHARGER_ONLINE, "r");
+    if (file == NULL) {
+        perror("Failed to open file");
+        exit(1);
+    }
+
+    int status;
+    fscanf(file, "%d", &status);
+    fclose(file);
+
+    if (status == 0) {
+        printf("Charger is offline. exiting\n");
+        exit(0);
+    }
+}
+
+static void *check_charger(void* arg) {
+    (void)arg; // unused, don't throw a warning
+
+    while (1) {
+        check_charger_status();
+        sleep(1);
+    }
+    return NULL;
+}
+
+static int bootreason_charger() {
+    FILE *file;
+    char *buffer = NULL;
+    size_t size = 0;
+
+    file = fopen(CMDLINE_FILE, "r");
+    if (file == NULL) {
+        perror("Failed to open file");
+        return 0;
+    }
+
+    if (getline(&buffer, &size, file) == -1) {
+        perror("Failed to read file");
+        fclose(file);
+        return 0;
+    }
+
+    fclose(file);
+
+    if (strstr(buffer, CHARGER_STRING) != NULL) {
+        free(buffer);
+        return 1;
+    }
+
+    free(buffer);
+    return 0;
+}
+
+
 /**
  * Main
  */
 
 int main(int argc, char *argv[]) {
+    if (!bootreason_charger()) {
+        printf("Device is not in charger mode\n");
+        exit(0);
+    }
+
+    check_charger_status();
+
+    struct stat buffer;
+    if (stat("/usr/bin/plymouth", &buffer) == 0) { // plymouth will block minui
+        system("plymouth quit");
+    }
+
     /* Parse command line options */
     ul_cli_parse_opts(argc, argv, &cli_opts);
 
@@ -303,6 +395,9 @@ int main(int argc, char *argv[]) {
 
     pthread_t battery_thread;
     pthread_create(&battery_thread, NULL, update_battery_level, NULL);
+
+    pthread_t charger_thread;
+    pthread_create(&charger_thread, NULL, check_charger, NULL);
 
     /* Run lvgl in "tickless" mode */
     while(1) {
