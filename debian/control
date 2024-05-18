@@ -7,19 +7,16 @@ Build-Depends: debhelper-compat (= 13),
                libxkbcommon-dev,
                libdrm-dev,
                libminui-dev,
-               libcryptsetup-dev,
                meson (>= 0.53.0),
                pkg-config,
-               libzstd-dev
 Standards-Version: 4.6.1.0
 Section: libs
 Vcs-Git: https://github.com/FuriLabs/lvglcharger.git
-Vcs-Browser: https://github.com/FuriLabs/furios-recovery
+Vcs-Browser: https://github.com/FuriLabs/lvglcharger
 Rules-Requires-Root: no
 
-Package: furios-recovery
+Package: lvglcharger
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-         zstd
-Description: Recovery project for the initramfs based on LVGL
+Description: Charger mode program using LVGL

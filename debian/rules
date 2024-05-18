@@ -13,4 +13,4 @@ override_dh_installinitramfs:
 
 override_dh_auto_install:
 	dh_auto_install
-	cp $(CURDIR)/debian/lvglcharger.conf $(CURDIR)/debian/lvglcharger/etc/lvglcharger.conf
+	cp $(CURDIR)/debian/lvglcharger.furios.conf $(CURDIR)/debian/lvglcharger/etc/lvglcharger.conf
