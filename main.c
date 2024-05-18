@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #include <sys/reboot.h>
 #include <sys/time.h>
@@ -59,6 +60,9 @@ ul_cli_opts cli_opts;
 ul_config_opts conf_opts;
 
 bool is_alternate_theme = true;
+
+lv_obj_t *battery_fill;
+lv_obj_t *battery_label;
 
 /**
  * Static prototypes
@@ -79,6 +83,16 @@ static void set_theme(bool is_dark);
 static void sigaction_handler(int signum);
 
 /**
+ * Return current battery capacity
+ */
+static int read_battery_capacity(void);
+
+/**
+ * Update the battery level
+ */
+static void *update_battery_level(void *arg);
+
+/**
  * Static functions
  */
 
@@ -90,6 +104,67 @@ static void sigaction_handler(int signum) {
     LV_UNUSED(signum);
     ul_terminal_reset_current_terminal();
     exit(0);
+}
+
+static int read_battery_capacity(void) {
+    FILE *file = fopen("/sys/class/power_supply/battery/capacity", "r");
+    if (file == NULL) {
+        perror("Failed to open capacity file");
+        return -1;
+    }
+
+    int capacity;
+    fscanf(file, "%d", &capacity);
+    fclose(file);
+
+    return capacity;
+}
+
+static void *update_battery_level(void *arg) {
+    (void)arg; // unused, don't throw a warning
+
+    while (1) {
+        int capacity = read_battery_capacity();
+        if (capacity >= 0 && capacity <= 100) {
+            if (capacity == 100) {
+                lv_obj_set_size(battery_fill, LV_PCT(100), 99 * 8); // on 100, it goes out of the border radius, because of rounded corners, don't go above 99
+            // levels 1 to 12 are a little different as we have rounded corners and need to take care of it
+            } else if (capacity == 1) {
+                lv_obj_set_size(battery_fill, LV_PCT(80), capacity * 8);
+            } else if (capacity == 2) {
+                lv_obj_set_size(battery_fill, LV_PCT(82), capacity * 8);
+            } else if (capacity == 3) {
+                lv_obj_set_size(battery_fill, LV_PCT(83), capacity * 8);
+            } else if (capacity == 4) {
+                lv_obj_set_size(battery_fill, LV_PCT(84), capacity * 8);
+            } else if (capacity == 5) {
+                lv_obj_set_size(battery_fill, LV_PCT(86), capacity * 8);
+            } else if (capacity == 6) {
+                lv_obj_set_size(battery_fill, LV_PCT(88), capacity * 8);
+            } else if (capacity == 7) {
+                lv_obj_set_size(battery_fill, LV_PCT(89), capacity * 8);
+            } else if (capacity == 8) {
+                lv_obj_set_size(battery_fill, LV_PCT(91), capacity * 8);
+            } else if (capacity == 9) {
+                lv_obj_set_size(battery_fill, LV_PCT(92), capacity * 8);
+            } else if (capacity == 10) {
+                lv_obj_set_size(battery_fill, LV_PCT(94), capacity * 8);
+            } else if (capacity == 11) {
+                lv_obj_set_size(battery_fill, LV_PCT(96), capacity * 8);
+            } else if (capacity == 12) {
+                lv_obj_set_size(battery_fill, LV_PCT(98), capacity * 8);
+            } else {
+                lv_obj_set_size(battery_fill, LV_PCT(100), capacity * 8);
+            }
+
+            lv_label_set_text_fmt(battery_label, "%d%%", capacity);
+            lv_obj_align(battery_fill, LV_ALIGN_BOTTOM_MID, 0, 0);
+        }
+
+        sleep(1);
+    }
+
+    return NULL;
 }
 
 /**
@@ -197,6 +272,17 @@ int main(int argc, char *argv[]) {
     lv_obj_set_style_border_width(battery, 5, LV_PART_MAIN);
     lv_obj_set_style_border_color(battery, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_radius(battery, 60, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(battery, 0, LV_PART_MAIN);
+
+    /* Green fill */
+    battery_fill = lv_obj_create(battery);
+    lv_obj_set_size(battery_fill, LV_PCT(100), LV_PCT(0));
+    lv_obj_align(battery_fill, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(battery_fill, lv_color_hex(0x00FF00), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(battery_fill, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(battery_fill, 55, LV_PART_MAIN);
+    lv_obj_set_style_border_width(battery_fill, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(battery_fill, 5, LV_PART_MAIN);
 
     /* Battery's tip */
     lv_obj_t *battery_tip = lv_obj_create(lv_scr_act());
@@ -205,6 +291,18 @@ int main(int argc, char *argv[]) {
     lv_obj_set_style_border_width(battery_tip, 5, LV_PART_MAIN);
     lv_obj_set_style_border_color(battery_tip, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_radius(battery_tip, 30, LV_PART_MAIN);
+
+    /* Battery text label */
+    battery_label = lv_label_create(battery);
+    lv_label_set_text(battery_label, "");
+    lv_obj_align(battery_label, LV_ALIGN_CENTER, 0, 0);
+    static lv_style_t style;
+    lv_style_init(&style);
+    lv_style_set_text_font(&style, &lv_font_montserrat_48);
+    lv_obj_add_style(battery_label, &style, 0);
+
+    pthread_t battery_thread;
+    pthread_create(&battery_thread, NULL, update_battery_level, NULL);
 
     /* Run lvgl in "tickless" mode */
     while(1) {
