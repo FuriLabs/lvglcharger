@@ -92,7 +92,6 @@ static void apply_theme_cb(lv_theme_t *theme, lv_obj_t *obj);
 
 static void init_styles(const ul_theme *theme) {
     reset_style(&(styles.widget));
-    lv_style_set_text_font(&(styles.widget), &font_32);
 
     reset_style(&(styles.window));
     lv_style_set_bg_opa(&(styles.window), LV_OPA_COVER);
@@ -316,9 +315,6 @@ void ul_theme_apply(const ul_theme *theme) {
     }
 
     lv_theme.disp = NULL;
-    lv_theme.font_small = &font_32;
-    lv_theme.font_normal = &font_32;
-    lv_theme.font_large = &font_32;
     lv_theme.apply_cb = apply_theme_cb;
 
     current_theme = *theme;
