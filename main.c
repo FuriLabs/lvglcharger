@@ -57,7 +57,7 @@
  */
 
 #define CMDLINE_FILE "/proc/cmdline"
-#define CHARGER_STRING "furi.bootreason=charger"
+#define CHARGER_STRING "androidboot.bootreason=usb"
 #define BATTERY_CAPACITY "/sys/class/power_supply/battery/capacity"
 #define CHARGER_ONLINE "/sys/class/power_supply/charger/online"
 
