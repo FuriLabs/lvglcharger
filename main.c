@@ -60,6 +60,8 @@
 #define CHARGER_STRING "androidboot.bootreason=usb"
 #define BATTERY_CAPACITY "/sys/class/power_supply/battery/capacity"
 #define CHARGER_ONLINE "/sys/class/power_supply/charger/online"
+#define MAX_BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/max_brightness"
+#define BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/brightness"
 
 ul_cli_opts cli_opts;
 ul_config_opts conf_opts;
@@ -115,6 +117,11 @@ static void *check_charger(void* arg);
  * Returns 0 if device is in charger mode
  */
 static int bootreason_charger();
+
+/**
+ * Lowers the brightness to 1/4th of max_brightness
+ */
+static void adjust_backlight();
 
 /**
  * Static functions
@@ -216,6 +223,39 @@ static void *check_charger(void* arg) {
         sleep(1);
     }
     return NULL;
+}
+
+static void adjust_backlight() {
+    FILE* file = fopen(MAX_BRIGHTNESS_PATH, "r");
+    if (file == NULL) {
+        printf("Failed to open max brightness file");
+        return;
+    }
+
+    int max_brightness;
+    if (fscanf(file, "%d", &max_brightness) != 1) {
+        printf("Failed to read max brightness");
+        fclose(file);
+        return;
+    }
+    fclose(file);
+
+    int new_brightness = max_brightness / 4;
+
+    file = fopen(BRIGHTNESS_PATH, "w");
+    if (file == NULL) {
+        printf("Failed to open brightness file");
+        return;
+    }
+
+    if (fprintf(file, "%d", new_brightness) < 0) {
+        printf("Failed to write new brightness");
+        fclose(file);
+        return;
+    }
+    fclose(file);
+
+    printf("Backlight adjusted to %d", new_brightness);
 }
 
 static int bootreason_charger() {
@@ -392,6 +432,8 @@ int main(int argc, char *argv[]) {
     lv_style_init(&style);
     lv_style_set_text_font(&style, &lv_font_montserrat_48);
     lv_obj_add_style(battery_label, &style, 0);
+
+    adjust_backlight();
 
     pthread_t battery_thread;
     pthread_create(&battery_thread, NULL, update_battery_level, NULL);
