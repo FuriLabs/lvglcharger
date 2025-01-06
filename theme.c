@@ -20,11 +20,11 @@
 
 #include "theme.h"
 
-#include "log.h"
 #include "lvglcharger.h"
 
 #include "lvgl/lvgl.h"
 
+#include <stdio.h>
 
 /**
  * Static variables
@@ -310,7 +310,7 @@ static void apply_theme_cb(lv_theme_t *theme, lv_obj_t *obj) {
 
 void ul_theme_apply(const ul_theme *theme) {
     if (!theme) {
-        ul_log(UL_LOG_LEVEL_ERROR, "Could not apply theme from NULL pointer");
+        printf("Could not apply theme from NULL pointer\n");
         return;
     }
 

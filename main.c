@@ -22,7 +22,6 @@
 
 #include "backends.h"
 #include "command_line.h"
-#include "log.h"
 #include "lvglcharger.h"
 #include "terminal.h"
 #include "theme.h"
@@ -228,13 +227,13 @@ static void *check_charger(void* arg) {
 static void adjust_backlight() {
     FILE* file = fopen(MAX_BRIGHTNESS_PATH, "r");
     if (file == NULL) {
-        printf("Failed to open max brightness file");
+        printf("Failed to open max brightness file\n");
         return;
     }
 
     int max_brightness;
     if (fscanf(file, "%d", &max_brightness) != 1) {
-        printf("Failed to read max brightness");
+        printf("Failed to read max brightness\n");
         fclose(file);
         return;
     }
@@ -244,18 +243,18 @@ static void adjust_backlight() {
 
     file = fopen(BRIGHTNESS_PATH, "w");
     if (file == NULL) {
-        printf("Failed to open brightness file");
+        printf("Failed to open brightness file\n");
         return;
     }
 
     if (fprintf(file, "%d", new_brightness) < 0) {
-        printf("Failed to write new brightness");
+        printf("Failed to write new brightness\n");
         fclose(file);
         return;
     }
     fclose(file);
 
-    printf("Backlight adjusted to %d", new_brightness);
+    printf("Backlight adjusted to %d\n", new_brightness);
 }
 
 static int bootreason_charger() {
@@ -307,14 +306,6 @@ int main(int argc, char *argv[]) {
     /* Parse command line options */
     ul_cli_parse_opts(argc, argv, &cli_opts);
 
-    /* Set up log level */
-    if (cli_opts.verbose) {
-        ul_log_set_level(UL_LOG_LEVEL_VERBOSE);
-    }
-
-    /* Announce ourselves */
-    ul_log(UL_LOG_LEVEL_VERBOSE, "lvglcharger %s", UL_VERSION);
-
     /* Parse config files */
     ul_config_parse(cli_opts.config_files, cli_opts.num_config_files, &conf_opts);
 
@@ -328,8 +319,6 @@ int main(int argc, char *argv[]) {
 
     /* Initialise LVGL and set up logging callback */
     lv_init();
-
-    lv_log_register_print_cb(ul_log_print_cb);
 
     /* Initialise display driver */
     static lv_disp_drv_t disp_drv;
@@ -363,7 +352,7 @@ int main(int argc, char *argv[]) {
         break;
 #endif /* USE_MINUI */
     default:
-        ul_log(UL_LOG_LEVEL_ERROR, "Unable to find suitable backend");
+        printf("Unable to find suitable backend\n");
         exit(EXIT_FAILURE);
     }
 

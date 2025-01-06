@@ -32,7 +32,6 @@ lvglcharger_sources = [
   'backends.c',
   'command_line.c',
   'config.c',
-  'log.c',
   'main.c',
   'terminal.c',
   'themes.c',

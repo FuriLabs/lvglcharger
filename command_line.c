@@ -20,7 +20,6 @@
 
 #include "command_line.h"
 
-#include "log.h"
 #include "lvglcharger.h"
 
 #include <getopt.h>
@@ -54,7 +53,7 @@ static void init_opts(ul_cli_opts *opts) {
 
     opts->config_files = malloc(sizeof(char *));
     if (!opts->config_files) {
-        ul_log(UL_LOG_LEVEL_ERROR, "Could not allocate memory for config file paths");
+        printf("Could not allocate memory for config file paths\n");
         exit(EXIT_FAILURE);
     }
     opts->config_files[0] = "/etc/lvglcharger.conf";
@@ -70,10 +69,6 @@ static void print_usage() {
     fprintf(stderr,
         /*-------------------------------- 78 CHARS --------------------------------*/
         "Usage: lvglcharger [OPTION]\n"
-        "\n"
-        "lvglcharger values the CRYPTTAB_TRIED variable. Upon completion, the entered\n"
-        "password is printed to STDOUT. All other output happens on STDERR.\n"
-        "\n"
         "Mandatory arguments to long options are mandatory for short options too.\n"
         "  -c, --config=PATH         Locaton of the main config file. Defaults to\n"
         "                            /etc/lvglcharger.conf.\n"
@@ -87,7 +82,6 @@ static void print_usage() {
         "                            pixels and vertically by Y pixels\n"
         "  -d  --dpi=N               Override the display's DPI value\n"
         "  -h, --help                Print this message and exit\n"
-        "  -v, --verbose             Enable more detailed logging output on STDERR\n"
         "  -V, --version             Print the lvglcharger version and exit\n");
         /*-------------------------------- 78 CHARS --------------------------------*/
 }
@@ -121,7 +115,7 @@ void ul_cli_parse_opts(int argc, char *argv[], ul_cli_opts *opts) {
         case 'C':
             opts->config_files = realloc(opts->config_files, (opts->num_config_files + 1) * sizeof(char *));
             if (!opts->config_files) {
-                ul_log(UL_LOG_LEVEL_ERROR, "Could not allocate memory for config file paths");
+                printf("Could not allocate memory for config file paths\n");
                 exit(EXIT_FAILURE);
             }
             opts->config_files[opts->num_config_files] = optarg;
@@ -130,14 +124,14 @@ void ul_cli_parse_opts(int argc, char *argv[], ul_cli_opts *opts) {
         case 'g':
             if (sscanf(optarg, "%ix%i@%i,%i", &(opts->hor_res), &(opts->ver_res), &(opts->x_offset), &(opts->y_offset)) != 4) {
                 if (sscanf(optarg, "%ix%i", &(opts->hor_res), &(opts->ver_res)) != 2) {
-                    ul_log(UL_LOG_LEVEL_ERROR, "Invalid geometry argument \"%s\"\n", optarg);
+                    printf("Invalid geometry argument \"%s\"\n", optarg);
                     exit(EXIT_FAILURE);
                 }
             }
             break;
         case 'd':
             if (sscanf(optarg, "%i", &(opts->dpi)) != 1) {
-                ul_log(UL_LOG_LEVEL_ERROR, "Invalid dpi argument \"%s\"\n", optarg);
+                printf("Invalid dpi argument \"%s\"\n", optarg);
                 exit(EXIT_FAILURE);
             }
             break;
