@@ -34,7 +34,7 @@
  * 
  * @param opts pointer to the options struct
  */
-static void init_opts(ul_config_opts *opts);
+static void init_opts(config_opts *opts);
 
 /**
  * Parse options from a configuration file.
@@ -42,7 +42,7 @@ static void init_opts(ul_config_opts *opts);
  * @param path path to configuration file
  * @param opts pointer for writing the parsed options into
  */
-static void parse_file(const char *path, ul_config_opts *opts);
+static void parse_file(const char *path, config_opts *opts);
 
 /**
  * Handle parsing events from INIH.
@@ -69,22 +69,22 @@ static bool parse_bool(const char *value, bool *result);
  * Static functions
  */
 
-static void init_opts(ul_config_opts *opts) {
+static void init_opts(config_opts *opts) {
     opts->general.animations = false;
-    opts->general.backend = ul_backends_backends[0] == NULL ? UL_BACKENDS_BACKEND_NONE : 0;
-    opts->theme.default_id = UL_THEMES_THEME_BREEZY_DARK;
-    opts->theme.alternate_id = UL_THEMES_THEME_BREEZY_LIGHT;
+    opts->general.backend = backends_backends[0] == NULL ? BACKENDS_BACKEND_NONE : 0;
+    opts->theme.default_id = THEMES_THEME_BREEZY_DARK;
+    opts->theme.alternate_id = THEMES_THEME_BREEZY_LIGHT;
     opts->general.timeout = 0;
 }
 
-static void parse_file(const char *path, ul_config_opts *opts) {
+static void parse_file(const char *path, config_opts *opts) {
     if (ini_parse(path, parsing_handler, opts) != 0) {
         printf("Ignoring invalid config file %s\n", path);
     }
 }
 
 static int parsing_handler(void* user_data, const char* section, const char* key, const char* value) {
-    ul_config_opts *opts = (ul_config_opts *)user_data;
+    config_opts *opts = (config_opts *)user_data;
 
     if (strcmp(section, "general") == 0) {
         if (strcmp(key, "animations") == 0) {
@@ -92,8 +92,8 @@ static int parsing_handler(void* user_data, const char* section, const char* key
                 return 1;
             }
         } else if (strcmp(key, "backend") == 0) {
-            ul_backends_backend_id_t id = ul_backends_find_backend_with_name(value);
-            if (id != UL_BACKENDS_BACKEND_NONE) {
+            backends_backend_id_t id = backends_find_backend_with_name(value);
+            if (id != BACKENDS_BACKEND_NONE) {
                 opts->general.backend = id;
                 return 1;
             }
@@ -104,14 +104,14 @@ static int parsing_handler(void* user_data, const char* section, const char* key
         }
     } else if (strcmp(section, "theme") == 0) {
         if (strcmp(key, "default") == 0) {
-            ul_themes_theme_id_t id = ul_themes_find_theme_with_name(value);
-            if (id != UL_THEMES_THEME_NONE) {
+            themes_theme_id_t id = themes_find_theme_with_name(value);
+            if (id != THEMES_THEME_NONE) {
                 opts->theme.default_id = id;
                 return 1;
             }
         } else if (strcmp(key, "alternate") == 0) {
-            ul_themes_theme_id_t id = ul_themes_find_theme_with_name(value);
-            if (id != UL_THEMES_THEME_NONE) {
+            themes_theme_id_t id = themes_find_theme_with_name(value);
+            if (id != THEMES_THEME_NONE) {
                 opts->theme.alternate_id = id;
                 return 1;
             }
@@ -141,7 +141,7 @@ static bool parse_bool(const char *value, bool *result) {
  * Public functions
  */
 
-void ul_config_parse(const char **files, int num_files, ul_config_opts *opts) {
+void config_parse(const char **files, int num_files, config_opts *opts) {
     init_opts(opts);
     for (int i = 0; i < num_files; ++i) {
         parse_file(files[i], opts);

@@ -36,7 +36,7 @@
  * 
  * @param opts pointer to the options struct
  */
-static void init_opts(ul_cli_opts *opts);
+static void init_opts(cli_opts *opts);
 
 /**
  * Output usage instructions.
@@ -48,7 +48,7 @@ static void print_usage();
  * Static functions
  */
 
-static void init_opts(ul_cli_opts *opts) {
+static void init_opts(cli_opts *opts) {
     opts->num_config_files = 1;
 
     opts->config_files = malloc(sizeof(char *));
@@ -91,7 +91,7 @@ static void print_usage() {
  * Public functions
  */
 
-void ul_cli_parse_opts(int argc, char *argv[], ul_cli_opts *opts) {
+void cli_parse_opts(int argc, char *argv[], cli_opts *opts) {
     init_opts(opts);
 
     struct option long_opts[] = {
@@ -142,7 +142,7 @@ void ul_cli_parse_opts(int argc, char *argv[], ul_cli_opts *opts) {
             opts->verbose = true;
             break;
         case 'V':
-            fprintf(stderr, "lvglcharger %s\n", UL_VERSION);
+            fprintf(stderr, "lvglcharger %s\n", VERSION);
             exit(0);
         default:
             print_usage();

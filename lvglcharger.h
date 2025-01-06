@@ -19,15 +19,15 @@
  */
 
 
-#ifndef UL_LVGLCHARGER_H
-#define UL_LVGLCHARGER_H
+#ifndef LVGLCHARGER_H
+#define LVGLCHARGER_H
 
 #include "lvgl/lvgl.h"
 #include <sys/stat.h>
 #include <sys/mount.h>
 
-#ifndef UL_VERSION
-#define UL_VERSION "?" /* Just to silence IDE warning. Real version injected by meson during build. */
+#ifndef VERSION
+#define VERSION "?" /* Just to silence IDE warning. Real version injected by meson during build. */
 #endif
 
-#endif /* UL_LVGLCHARGER_H */
+#endif /* LVGLCHARGER_H */

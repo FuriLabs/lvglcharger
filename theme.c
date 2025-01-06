@@ -30,7 +30,7 @@
  * Static variables
  */
 
-static ul_theme current_theme;
+static theme current_theme;
 static lv_theme_t lv_theme;
 
 static struct {
@@ -68,7 +68,7 @@ static bool are_styles_initialised = false;
  *
  * @param theme theme to derive the styles from
  */
-static void init_styles(const ul_theme *theme);
+static void init_styles(const theme *theme);
 
 /**
  * Initialise or reset a style.
@@ -90,7 +90,7 @@ static void apply_theme_cb(lv_theme_t *theme, lv_obj_t *obj);
  * Static functions
  */
 
-static void init_styles(const ul_theme *theme) {
+static void init_styles(const theme *theme) {
     reset_style(&(styles.widget));
 
     reset_style(&(styles.window));
@@ -226,7 +226,7 @@ static void apply_theme_cb(lv_theme_t *theme, lv_obj_t *obj) {
         return;
     }
 
-    if (lv_obj_has_flag(obj, UL_WIDGET_HEADER)) {
+    if (lv_obj_has_flag(obj, WIDGET_HEADER)) {
         lv_obj_add_style(obj, &(styles.header), 0);
         return;
     }
@@ -308,7 +308,7 @@ static void apply_theme_cb(lv_theme_t *theme, lv_obj_t *obj) {
  * Public functions
  */
 
-void ul_theme_apply(const ul_theme *theme) {
+void theme_apply(const theme *theme) {
     if (!theme) {
         printf("Could not apply theme from NULL pointer\n");
         return;

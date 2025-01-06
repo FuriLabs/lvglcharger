@@ -62,8 +62,8 @@
 #define MAX_BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/max_brightness"
 #define BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/brightness"
 
-ul_cli_opts cli_opts;
-ul_config_opts conf_opts;
+cli_opts cli_options;
+config_opts conf_opts;
 
 bool is_alternate_theme = true;
 
@@ -127,12 +127,12 @@ static void adjust_backlight();
  */
 
 static void set_theme(bool is_alternate) {
-    ul_theme_apply(&(ul_themes_themes[is_alternate ? conf_opts.theme.alternate_id : conf_opts.theme.default_id]));
+    theme_apply(&(themes_themes[is_alternate ? conf_opts.theme.alternate_id : conf_opts.theme.default_id]));
 }
 
 static void sigaction_handler(int signum) {
     LV_UNUSED(signum);
-    ul_terminal_reset_current_terminal();
+    terminal_reset_current_terminal();
     exit(0);
 }
 
@@ -304,13 +304,13 @@ int main(int argc, char *argv[]) {
     }
 
     /* Parse command line options */
-    ul_cli_parse_opts(argc, argv, &cli_opts);
+    cli_parse_opts(argc, argv, &cli_options);
 
     /* Parse config files */
-    ul_config_parse(cli_opts.config_files, cli_opts.num_config_files, &conf_opts);
+    config_parse(cli_options.config_files, cli_options.num_config_files, &conf_opts);
 
     /* Prepare current TTY and clean up on termination */
-    ul_terminal_prepare_current_terminal();
+    terminal_prepare_current_terminal();
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = sigaction_handler;
@@ -331,21 +331,21 @@ int main(int argc, char *argv[]) {
 
     switch (conf_opts.general.backend) {
 #if USE_FBDEV
-    case UL_BACKENDS_BACKEND_FBDEV:
+    case BACKENDS_BACKEND_FBDEV:
         fbdev_init();
         fbdev_get_sizes(&hor_res, &ver_res, &dpi);
         disp_drv.flush_cb = fbdev_flush;
         break;
 #endif /* USE_FBDEV */
 #if USE_DRM
-    case UL_BACKENDS_BACKEND_DRM:
+    case BACKENDS_BACKEND_DRM:
         drm_init();
         drm_get_sizes((lv_coord_t *)&hor_res, (lv_coord_t *)&ver_res, &dpi);
         disp_drv.flush_cb = drm_flush;
         break;
 #endif /* USE_DRM */
 #if USE_MINUI
-    case UL_BACKENDS_BACKEND_MINUI:
+    case BACKENDS_BACKEND_MINUI:
         minui_init();
         minui_get_sizes(&hor_res, &ver_res, &dpi);
         disp_drv.flush_cb = minui_flush;
@@ -357,14 +357,14 @@ int main(int argc, char *argv[]) {
     }
 
     /* Override display parameters with command line options if necessary */
-    if (cli_opts.hor_res > 0) {
-        hor_res = cli_opts.hor_res;
+    if (cli_options.hor_res > 0) {
+        hor_res = cli_options.hor_res;
     }
-    if (cli_opts.ver_res > 0) {
-        ver_res = cli_opts.ver_res;
+    if (cli_options.ver_res > 0) {
+        ver_res = cli_options.ver_res;
     }
-    if (cli_opts.dpi > 0) {
-        dpi = cli_opts.dpi;
+    if (cli_options.dpi > 0) {
+        dpi = cli_options.dpi;
     }
 
     /* Prepare display buffer */
@@ -377,8 +377,8 @@ int main(int argc, char *argv[]) {
     disp_drv.draw_buf = &disp_buf;
     disp_drv.hor_res = hor_res;
     disp_drv.ver_res = ver_res;
-    disp_drv.offset_x = cli_opts.x_offset;
-    disp_drv.offset_y = cli_opts.y_offset;
+    disp_drv.offset_x = cli_options.x_offset;
+    disp_drv.offset_y = cli_options.y_offset;
     disp_drv.dpi = dpi;
     lv_disp_drv_register(&disp_drv);
 
@@ -448,7 +448,7 @@ int main(int argc, char *argv[]) {
  * 
  * @return tick in ms
  */
-uint32_t ul_get_tick(void) {
+uint32_t get_tick(void) {
     static uint64_t start_ms = 0;
     if (start_ms == 0) {
         struct timeval tv_start;

@@ -18,8 +18,8 @@
  */
 
 
-#ifndef UL_CONFIG_H
-#define UL_CONFIG_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
 #include "backends.h"
 #include "themes.h"
@@ -32,32 +32,32 @@
  */
 typedef struct {
     /* Backend to use */
-    ul_backends_backend_id_t backend;
+    backends_backend_id_t backend;
     /* If true, use animations */
     bool animations;
     /* Timeout (in seconds) - once elapsed, the device will shutdown. 0 (default) to disable */
     uint16_t timeout;
-} ul_config_opts_general;
+} config_opts_general;
 
 /**
  * Options related to the theme
  */
 typedef struct {
     /* Default theme */
-    ul_themes_theme_id_t default_id;
+    themes_theme_id_t default_id;
     /* Alternate theme */
-    ul_themes_theme_id_t alternate_id;
-} ul_config_opts_theme;
+    themes_theme_id_t alternate_id;
+} config_opts_theme;
 
 /**
  * Options parsed from config file(s)
  */
 typedef struct {
     /* General options */
-    ul_config_opts_general general;
+    config_opts_general general;
     /* Options related to the theme */
-    ul_config_opts_theme theme;
-} ul_config_opts;
+    config_opts_theme theme;
+} config_opts;
 
 /**
  * Parse options from one or more configuration files.
@@ -66,6 +66,6 @@ typedef struct {
  * @param num_files number of configuration files
  * @param opts pointer for writing the parsed options into
  */
-void ul_config_parse(const char **files, int num_files, ul_config_opts *opts);
+void config_parse(const char **files, int num_files, config_opts *opts);
 
-#endif /* UL_CONFIG_H */
+#endif /* CONFIG_H */
