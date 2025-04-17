@@ -3,6 +3,7 @@ Priority: optional
 Maintainer: Bardia Moshiri <fakeshell@bardia.tech>
 Build-Depends: debhelper-compat (= 13),
                libinih-dev,
+               libinput-dev,
                libdrm-dev,
                libminui-dev,
                meson (>= 0.53.0),

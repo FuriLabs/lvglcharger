@@ -34,6 +34,7 @@ For an example configuration file, see [lvglcharger].
 - [inih]
 - [lvgl] (git submodule / linked statically)
 - [lv_drivers] (git submodule / linked statically)
+- [libinput]
 - [libdrm] (optional, required for the DRM backend)
 - evdev kernel module
 

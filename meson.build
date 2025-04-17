@@ -40,6 +40,7 @@ lvglcharger_sources = [
 
 lvglcharger_dependencies = [
   dependency('inih', static: enable_static),
+  dependency('libinput', static: enable_static),
 ]
 
 cc = meson.get_compiler('c')

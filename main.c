@@ -1,7 +1,7 @@
 /**
  * Copyright 2021 Johannes Marbach
- * Copyright 2024 Bardia Moshiri
  * Copyright 2024 David Badiei
+ * Copyright 2025 Bardia Moshiri
  *
  * This file is part of lvglcharger, hereafter referred to as the program.
  *
@@ -43,13 +43,18 @@
 #include "lvgl/lvgl.h"
 
 #include <signal.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <errno.h>
+#include <dirent.h>
 
+#include <sys/stat.h>
 #include <sys/reboot.h>
 #include <sys/time.h>
+
+#include <libinput.h>
+#include <linux/input.h>
 
 /**
  * Static variables
@@ -66,6 +71,8 @@ cli_opts cli_options;
 config_opts conf_opts;
 
 bool is_alternate_theme = true;
+bool screen_is_on = true;
+int max_brightness = 0;
 
 lv_obj_t *battery_fill;
 lv_obj_t *battery_label;
@@ -103,7 +110,7 @@ static void *update_battery_level(void *arg);
 /**
  * Check charger status, if device stopped charging, exit out
  */
-static void check_charger_status();
+static void check_charger_status(void);
 
 /**
  * Check charger status repeatedly
@@ -115,12 +122,26 @@ static void *check_charger(void* arg);
 /**
  * Returns 0 if device is in charger mode
  */
-static int bootreason_charger();
+static int bootreason_charger(void);
 
 /**
- * Lowers the brightness to 1/4th of max_brightness
+* Sets the brightness to the specified value
+*
+* @param brightness The brightness value to set
+*/
+static void set_brightness(int brightness);
+
+/**
+ * Initialize libinput and monitor for power key events
+ *
+ * @param *arg is unused
  */
-static void adjust_backlight();
+static void *monitor_power_key(void *arg);
+
+/**
+ * Toggle screen state (on/off) by adjusting brightness
+ */
+static void toggle_screen(void);
 
 /**
  * Static functions
@@ -151,41 +172,40 @@ static int read_battery_capacity(void) {
 }
 
 static void *update_battery_level(void *arg) {
-    (void)arg; // unused, don't throw a warning
+    (void)arg;
 
     while (1) {
         int capacity = read_battery_capacity();
         if (capacity >= 0 && capacity <= 100) {
-            if (capacity == 100) {
-                lv_obj_set_size(battery_fill, LV_PCT(100), 99 * 8); // on 100, it goes out of the border radius, because of rounded corners, don't go above 99
-            // levels 1 to 12 are a little different as we have rounded corners and need to take care of it
-            } else if (capacity == 1) {
+            if (capacity == 100)
+                lv_obj_set_size(battery_fill, LV_PCT(100), 99 * 8); /* on 100, it goes out of the border radius because of rounded corners, don't go above 99 */
+            /* levels 1 to 12 are a little different as we have rounded corners and need to take care of it */
+            else if (capacity == 1)
                 lv_obj_set_size(battery_fill, LV_PCT(80), capacity * 8);
-            } else if (capacity == 2) {
+            else if (capacity == 2)
                 lv_obj_set_size(battery_fill, LV_PCT(82), capacity * 8);
-            } else if (capacity == 3) {
+            else if (capacity == 3)
                 lv_obj_set_size(battery_fill, LV_PCT(83), capacity * 8);
-            } else if (capacity == 4) {
+            else if (capacity == 4)
                 lv_obj_set_size(battery_fill, LV_PCT(84), capacity * 8);
-            } else if (capacity == 5) {
+            else if (capacity == 5)
                 lv_obj_set_size(battery_fill, LV_PCT(86), capacity * 8);
-            } else if (capacity == 6) {
+            else if (capacity == 6)
                 lv_obj_set_size(battery_fill, LV_PCT(88), capacity * 8);
-            } else if (capacity == 7) {
+            else if (capacity == 7)
                 lv_obj_set_size(battery_fill, LV_PCT(89), capacity * 8);
-            } else if (capacity == 8) {
+            else if (capacity == 8)
                 lv_obj_set_size(battery_fill, LV_PCT(91), capacity * 8);
-            } else if (capacity == 9) {
+            else if (capacity == 9)
                 lv_obj_set_size(battery_fill, LV_PCT(92), capacity * 8);
-            } else if (capacity == 10) {
+            else if (capacity == 10)
                 lv_obj_set_size(battery_fill, LV_PCT(94), capacity * 8);
-            } else if (capacity == 11) {
+            else if (capacity == 11)
                 lv_obj_set_size(battery_fill, LV_PCT(96), capacity * 8);
-            } else if (capacity == 12) {
+            else if (capacity == 12)
                 lv_obj_set_size(battery_fill, LV_PCT(98), capacity * 8);
-            } else {
+            else
                 lv_obj_set_size(battery_fill, LV_PCT(100), capacity * 8);
-            }
 
             lv_label_set_text_fmt(battery_label, "%d%%", capacity);
             lv_obj_align(battery_fill, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -197,7 +217,7 @@ static void *update_battery_level(void *arg) {
     return NULL;
 }
 
-static void check_charger_status() {
+static void check_charger_status(void) {
     FILE* file = fopen(CHARGER_ONLINE, "r");
     if (file == NULL) {
         perror("Failed to open file");
@@ -215,7 +235,7 @@ static void check_charger_status() {
 }
 
 static void *check_charger(void* arg) {
-    (void)arg; // unused, don't throw a warning
+    (void)arg;
 
     while (1) {
         check_charger_status();
@@ -224,40 +244,34 @@ static void *check_charger(void* arg) {
     return NULL;
 }
 
-static void adjust_backlight() {
-    FILE* file = fopen(MAX_BRIGHTNESS_PATH, "r");
-    if (file == NULL) {
-        printf("Failed to open max brightness file\n");
-        return;
-    }
-
-    int max_brightness;
-    if (fscanf(file, "%d", &max_brightness) != 1) {
-        printf("Failed to read max brightness\n");
-        fclose(file);
-        return;
-    }
-    fclose(file);
-
-    int new_brightness = max_brightness / 4;
-
-    file = fopen(BRIGHTNESS_PATH, "w");
+static void set_brightness(int brightness) {
+    FILE* file = fopen(BRIGHTNESS_PATH, "w");
     if (file == NULL) {
         printf("Failed to open brightness file\n");
         return;
     }
 
-    if (fprintf(file, "%d", new_brightness) < 0) {
+    if (fprintf(file, "%d", brightness) < 0) {
         printf("Failed to write new brightness\n");
         fclose(file);
         return;
     }
+
     fclose(file);
 
-    printf("Backlight adjusted to %d\n", new_brightness);
+    printf("Brightness set to %d\n", brightness);
+
+    screen_is_on = (brightness > 0);
 }
 
-static int bootreason_charger() {
+static void toggle_screen(void) {
+    if (screen_is_on)
+        set_brightness(0);
+    else
+        set_brightness(max_brightness / 4);
+}
+
+static int bootreason_charger(void) {
     FILE *file;
     char *buffer = NULL;
     size_t size = 0;
@@ -285,10 +299,126 @@ static int bootreason_charger() {
     return 0;
 }
 
+static int open_restricted(const char *path, int flags, void *user_data) {
+    (void)user_data;
+    int fd = open(path, flags);
+    return fd < 0 ? -errno : fd;
+}
 
-/**
- * Main
- */
+static void close_restricted(int fd, void *user_data) {
+    (void)user_data;
+    close(fd);
+}
+
+static const struct libinput_interface interface = {
+    .open_restricted = open_restricted,
+    .close_restricted = close_restricted,
+};
+
+static int is_input_device(const char *path) {
+    int fd;
+    char name[256];
+
+    fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return 0;
+
+    if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0) {
+        close(fd);
+        return 0;
+    }
+
+    close(fd);
+    return 1;
+}
+
+static void *monitor_power_key(void *arg) {
+    (void)arg;
+
+    struct libinput *li;
+    struct libinput_event *event;
+    int rc;
+
+    li = libinput_path_create_context(&interface, NULL);
+    if (!li) {
+        fprintf(stderr, "Failed to initialize libinput context\n");
+        return NULL;
+    }
+
+    DIR *dir;
+    struct dirent *entry;
+    char path[PATH_MAX];
+
+    dir = opendir("/dev/input");
+    if (!dir) {
+        fprintf(stderr, "Failed to open /dev/input directory\n");
+        libinput_unref(li);
+        return NULL;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strncmp(entry->d_name, "event", 5) == 0) {
+            snprintf(path, sizeof(path), "/dev/input/%s", entry->d_name);
+
+            if (is_input_device(path)) {
+                struct libinput_device *device;
+
+                device = libinput_path_add_device(li, path);
+                if (!device)
+                    fprintf(stderr, "Failed to add device: %s\n", path);
+                else
+                    printf("Added input device: %s\n", path);
+            }
+        }
+    }
+
+    closedir(dir);
+
+    printf("Monitoring all input devices for KEY_POWER events...\n");
+
+    libinput_dispatch(li);
+
+    while (1) {
+        fd_set fds;
+        int fd = libinput_get_fd(li);
+
+        FD_ZERO(&fds);
+        FD_SET(fd, &fds);
+
+        rc = select(fd + 1, &fds, NULL, NULL, NULL);
+        if (rc < 0) {
+            fprintf(stderr, "select() failed: %s\n", strerror(errno));
+            break;
+        }
+
+        libinput_dispatch(li);
+
+        while ((event = libinput_get_event(li)) != NULL) {
+            if (libinput_event_get_type(event) == LIBINPUT_EVENT_KEYBOARD_KEY) {
+                struct libinput_event_keyboard *key_event;
+                enum libinput_key_state state;
+                uint32_t key;
+
+                key_event = libinput_event_get_keyboard_event(event);
+                key = libinput_event_keyboard_get_key(key_event);
+                state = libinput_event_keyboard_get_key_state(key_event);
+
+                if (key == KEY_POWER && state == LIBINPUT_KEY_STATE_RELEASED) {
+                    struct libinput_device *device = libinput_event_get_device(event);
+                    const char *device_name = libinput_device_get_name(device);
+
+                    printf("KEY_POWER released on device '%s'. Toggling screen state.\n", device_name);
+                    toggle_screen();
+                }
+            }
+
+            libinput_event_destroy(event);
+        }
+    }
+
+    libinput_unref(li);
+    return NULL;
+}
 
 int main(int argc, char *argv[]) {
     if (!bootreason_charger()) {
@@ -299,9 +429,8 @@ int main(int argc, char *argv[]) {
     check_charger_status();
 
     struct stat buffer;
-    if (stat("/usr/bin/plymouth", &buffer) == 0) { // plymouth will block minui
+    if (stat("/usr/bin/plymouth", &buffer) == 0) /* plymouth will block minui */
         system("plymouth quit");
-    }
 
     /* Parse command line options */
     cli_parse_opts(argc, argv, &cli_options);
@@ -316,6 +445,18 @@ int main(int argc, char *argv[]) {
     action.sa_handler = sigaction_handler;
     sigaction(SIGINT, &action, NULL);
     sigaction(SIGTERM, &action, NULL);
+
+    /* Read max brightness */
+    FILE* file = fopen(MAX_BRIGHTNESS_PATH, "r");
+    if (file == NULL) {
+        printf("Failed to open max brightness file\n");
+    } else {
+        if (fscanf(file, "%d", &max_brightness) != 1) {
+            printf("Failed to read max brightness\n");
+            max_brightness = 255; /* fallback default */
+        }
+        fclose(file);
+    }
 
     /* Initialise LVGL and set up logging callback */
     lv_init();
@@ -357,15 +498,12 @@ int main(int argc, char *argv[]) {
     }
 
     /* Override display parameters with command line options if necessary */
-    if (cli_options.hor_res > 0) {
+    if (cli_options.hor_res > 0)
         hor_res = cli_options.hor_res;
-    }
-    if (cli_options.ver_res > 0) {
+    if (cli_options.ver_res > 0)
         ver_res = cli_options.ver_res;
-    }
-    if (cli_options.dpi > 0) {
+    if (cli_options.dpi > 0)
         dpi = cli_options.dpi;
-    }
 
     /* Prepare display buffer */
     const size_t buf_size = hor_res * ver_res / 10; /* At least 1/10 of the display size is recommended */
@@ -422,16 +560,18 @@ int main(int argc, char *argv[]) {
     lv_style_set_text_font(&style, &lv_font_montserrat_48);
     lv_obj_add_style(battery_label, &style, 0);
 
-    adjust_backlight();
+    /* Set initial brightness to 1/4 of max_brightness */
+    set_brightness(max_brightness / 4);
 
-    pthread_t battery_thread;
+    /* Create threads */
+    pthread_t battery_thread, charger_thread, power_key_thread;
+
     pthread_create(&battery_thread, NULL, update_battery_level, NULL);
-
-    pthread_t charger_thread;
     pthread_create(&charger_thread, NULL, check_charger, NULL);
+    pthread_create(&power_key_thread, NULL, monitor_power_key, NULL);
 
     /* Run lvgl in "tickless" mode */
-    while(1) {
+    while (1) {
         lv_task_handler();
         usleep(5000);
     }
@@ -440,12 +580,8 @@ int main(int argc, char *argv[]) {
 }
 
 /**
- * Tick generation
- */
-
-/**
  * Generate tick for LVGL.
- * 
+ *
  * @return tick in ms
  */
 uint32_t get_tick(void) {
