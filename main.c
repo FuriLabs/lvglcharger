@@ -533,15 +533,33 @@ int main(int argc, char *argv[]) {
     lv_obj_set_style_radius(battery, 60, LV_PART_MAIN);
     lv_obj_set_style_pad_all(battery, 0, LV_PART_MAIN);
 
-    /* Green fill */
+    /* Battery fill with blue-white gradient */
     battery_fill = lv_obj_create(battery);
     lv_obj_set_size(battery_fill, LV_PCT(100), LV_PCT(0));
     lv_obj_align(battery_fill, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_color(battery_fill, lv_color_hex(0x00FF00), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(battery_fill, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_radius(battery_fill, 55, LV_PART_MAIN);
-    lv_obj_set_style_border_width(battery_fill, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(battery_fill, 5, LV_PART_MAIN);
+
+    /* Create gradient style */
+    static lv_style_t style_gradient;
+    lv_style_init(&style_gradient);
+
+    /* Create the gradient descriptor */
+    static lv_grad_dsc_t grad;
+    grad.dir = LV_GRAD_DIR_VER;            /* Vertical gradient */
+    grad.stops_count = 2;                  /* 2 color stops */
+    grad.stops[0].color = lv_color_hex(0x093E94); /* Dark blue color */
+    grad.stops[1].color = lv_color_hex(0xCCCCCC); /* White-grayish color */
+    grad.stops[0].frac = 0;                /* Position of the first stop (0%) */
+    grad.stops[1].frac = 255;              /* Position of the second stop (100%) */
+
+    /* Set the gradient for the style's background */
+    lv_style_set_bg_grad(&style_gradient, &grad);
+    lv_style_set_bg_opa(&style_gradient, LV_OPA_COVER);
+    lv_style_set_radius(&style_gradient, 55);
+    lv_style_set_border_width(&style_gradient, 0);
+    lv_style_set_pad_all(&style_gradient, 5);
+
+    /* Apply the style to the battery fill object */
+    lv_obj_add_style(battery_fill, &style_gradient, 0);
 
     /* Battery's tip */
     lv_obj_t *battery_tip = lv_obj_create(lv_scr_act());
