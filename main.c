@@ -105,7 +105,7 @@ static int read_battery_capacity(void);
  *
  * @param *arg is unused
  */
-static void *update_battery_level(void *arg);
+static void* update_battery_level(void *arg);
 
 /**
  * Check charger status, if device stopped charging, exit out
@@ -117,7 +117,7 @@ static void check_charger_status(void);
  *
  * @param *arg is unused
  */
-static void *check_charger(void* arg);
+static void* check_charger(void* arg);
 
 /**
  * Returns 0 if device is in charger mode
@@ -136,7 +136,33 @@ static void set_brightness(int brightness);
  *
  * @param *arg is unused
  */
-static void *monitor_power_key(void *arg);
+static void* monitor_power_key(void *arg);
+
+/**
+ * Check if a file is an input device
+ *
+ * @param path Path to the input device
+ * @return 1 if it's an input device, 0 otherwise
+ */
+static int is_input_device(const char *path);
+
+/**
+ * Open callback for libinput
+ *
+ * @param path Device path to open
+ * @param flags Open flags
+ * @param user_data User data pointer (user_data is unused)
+ * @return File descriptor or negative error code
+ */
+static int open_restricted(const char *path, int flags, void *user_data);
+
+/**
+ * Close callback for libinput
+ *
+ * @param fd File descriptor to close
+ * @param user_data User data pointer (user_data is unused)
+ */
+static void close_restricted(int fd, void *user_data);
 
 /**
  * Toggle screen state (on/off) by adjusting brightness
@@ -234,7 +260,7 @@ static void check_charger_status(void) {
     }
 }
 
-static void *check_charger(void* arg) {
+static void* check_charger(void* arg) {
     (void)arg;
 
     while (1) {
@@ -332,7 +358,7 @@ static int is_input_device(const char *path) {
     return 1;
 }
 
-static void *monitor_power_key(void *arg) {
+static void* monitor_power_key(void *arg) {
     (void)arg;
 
     struct libinput *li;
