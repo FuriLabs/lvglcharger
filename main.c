@@ -590,7 +590,7 @@ int main(int argc, char *argv[]) {
     /* Battery's tip */
     lv_obj_t *battery_tip = lv_obj_create(lv_scr_act());
     lv_obj_set_size(battery_tip, 140, 45);
-    lv_obj_align(battery_tip, LV_ALIGN_TOP_MID, 0, 745);
+    lv_obj_align_to(battery_tip, battery, LV_ALIGN_OUT_TOP_MID, 0, -5);
     lv_obj_set_style_border_width(battery_tip, 5, LV_PART_MAIN);
     lv_obj_set_style_border_color(battery_tip, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_radius(battery_tip, 30, LV_PART_MAIN);
