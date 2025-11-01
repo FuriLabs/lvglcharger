@@ -19,7 +19,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include "backends.h"
 #include "command_line.h"
 #include "lvglcharger.h"
@@ -48,11 +47,12 @@
 #include <pthread.h>
 #include <errno.h>
 #include <dirent.h>
+#include <limits.h>
 
-#include <sys/stat.h>
 #include <sys/reboot.h>
-#include <sys/time.h>
+#include <sys/socket.h>
 
+#include <linux/netlink.h>
 #include <libinput.h>
 #include <linux/input.h>
 
@@ -63,7 +63,8 @@
 #define CMDLINE_FILE "/proc/cmdline"
 #define CHARGER_STRING "androidboot.bootreason=usb"
 #define BATTERY_CAPACITY "/sys/class/power_supply/battery/capacity"
-#define CHARGER_ONLINE "/sys/class/power_supply/charger/online"
+#define AC_ONLINE_PATH  "/sys/class/power_supply/ac/online"
+#define USB_ONLINE_PATH "/sys/class/power_supply/usb/online"
 #define MAX_BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/max_brightness"
 #define BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/brightness"
 
@@ -76,6 +77,9 @@ int max_brightness = 0;
 
 lv_obj_t *battery_fill;
 lv_obj_t *battery_label;
+
+static int current_capacity = -1;
+static int current_charger_online = 1;
 
 /**
  * Static prototypes
@@ -96,58 +100,50 @@ static void set_theme(bool is_dark);
 static void sigaction_handler(int signum);
 
 /**
- * Return current battery capacity
+ * Return current battery capacity (0-100), or -1 on error
  */
 static int read_battery_capacity(void);
 
 /**
- * Update the battery level
+ * Return current charger status (1 online / 0 offline)
+ */
+static int read_charger_online(void);
+
+/**
+ * Apply capacity value to UI widgets
  *
- * @param *arg is unused
+ * @param capacity Percentage 0-100
  */
-static void* update_battery_level(void *arg);
+static void ui_update_capacity(int capacity);
 
 /**
- * Check charger status, if device stopped charging, exit out
- */
-static void check_charger_status(void);
-
-/**
- * Check charger status repeatedly
+ * Update charger state
  *
- * @param *arg is unused
+ * @param online 1 if charger online, 0 if offline
  */
-static void* check_charger(void* arg);
+static void handle_charger_state(int online);
 
 /**
- * Returns 0 if device is in charger mode
- */
-static int bootreason_charger(void);
-
-/**
-* Sets the brightness to the specified value
-*
-* @param brightness The brightness value to set
-*/
-static void set_brightness(int brightness);
-
-/**
- * Initialize libinput and monitor for power key events
+ * libinput and screen power thread
  *
  * @param *arg is unused
  */
 static void* monitor_power_key(void *arg);
 
 /**
- * Check if a file is an input device
+ * Set initial brightness and toggle brightness later.
  *
- * @param path Path to the input device
- * @return 1 if it's an input device, 0 otherwise
+ * @param brightness The brightness value to set
  */
-static int is_input_device(const char *path);
+static void set_brightness(int brightness);
 
 /**
- * Open callback for libinput
+ * Toggle screen state (on/off) by adjusting brightness
+ */
+static void toggle_screen(void);
+
+/**
+ * Initialize libinput and monitor for power key events
  *
  * @param path Device path to open
  * @param flags Open flags
@@ -165,9 +161,41 @@ static int open_restricted(const char *path, int flags, void *user_data);
 static void close_restricted(int fd, void *user_data);
 
 /**
- * Toggle screen state (on/off) by adjusting brightness
+ * Check if a file is an input device
+ *
+ * @param path Path to the input device
+ * @return 1 if it's an input device, 0 otherwise
  */
-static void toggle_screen(void);
+static int is_input_device(const char *path);
+
+/**
+ * Returns 1 if bootreason == charger mode, 0 otherwise
+ */
+static int bootreason_charger(void);
+
+/**
+ * Listen to kernel uevents via netlink
+ *
+ * @param arg unused
+ */
+static void* monitor_power_supply_uevent(void *arg);
+
+/**
+ * Parse one uevent message for POWER_SUPPLY_ keys
+ *
+ * @param msg nul-separated env block from netlink
+ * @param len length of block
+ */
+static void parse_power_supply_event(const char *msg, ssize_t len);
+
+/**
+ * Static data / structs
+ */
+
+static const struct libinput_interface interface = {
+    .open_restricted = open_restricted,
+    .close_restricted = close_restricted,
+};
 
 /**
  * Static functions
@@ -191,83 +219,92 @@ static int read_battery_capacity(void) {
     }
 
     int capacity;
-    fscanf(file, "%d", &capacity);
+    if (fscanf(file, "%d", &capacity) != 1) {
+        fclose(file);
+        return -1;
+    }
     fclose(file);
 
     return capacity;
 }
 
-static void *update_battery_level(void *arg) {
-    (void)arg;
+static int read_charger_online(void) {
+    int ac_online  = -1;
+    int usb_online = -1;
 
-    while (1) {
-        int capacity = read_battery_capacity();
-        if (capacity >= 0 && capacity <= 100) {
-            if (capacity == 100)
-                lv_obj_set_size(battery_fill, LV_PCT(100), 99 * 8); /* on 100, it goes out of the border radius because of rounded corners, don't go above 99 */
-            /* levels 1 to 12 are a little different as we have rounded corners and need to take care of it */
-            else if (capacity == 1)
-                lv_obj_set_size(battery_fill, LV_PCT(80), capacity * 8);
-            else if (capacity == 2)
-                lv_obj_set_size(battery_fill, LV_PCT(82), capacity * 8);
-            else if (capacity == 3)
-                lv_obj_set_size(battery_fill, LV_PCT(83), capacity * 8);
-            else if (capacity == 4)
-                lv_obj_set_size(battery_fill, LV_PCT(84), capacity * 8);
-            else if (capacity == 5)
-                lv_obj_set_size(battery_fill, LV_PCT(86), capacity * 8);
-            else if (capacity == 6)
-                lv_obj_set_size(battery_fill, LV_PCT(88), capacity * 8);
-            else if (capacity == 7)
-                lv_obj_set_size(battery_fill, LV_PCT(89), capacity * 8);
-            else if (capacity == 8)
-                lv_obj_set_size(battery_fill, LV_PCT(91), capacity * 8);
-            else if (capacity == 9)
-                lv_obj_set_size(battery_fill, LV_PCT(92), capacity * 8);
-            else if (capacity == 10)
-                lv_obj_set_size(battery_fill, LV_PCT(94), capacity * 8);
-            else if (capacity == 11)
-                lv_obj_set_size(battery_fill, LV_PCT(96), capacity * 8);
-            else if (capacity == 12)
-                lv_obj_set_size(battery_fill, LV_PCT(98), capacity * 8);
-            else
-                lv_obj_set_size(battery_fill, LV_PCT(100), capacity * 8);
+    FILE *file;
 
-            lv_label_set_text_fmt(battery_label, "%d%%", capacity);
-            lv_obj_align(battery_fill, LV_ALIGN_BOTTOM_MID, 0, 0);
-        }
-
-        sleep(1);
+    file = fopen(AC_ONLINE_PATH, "r");
+    if (file) {
+        if (fscanf(file, "%d", &ac_online) != 1)
+            ac_online = -1;
+        fclose(file);
     }
 
-    return NULL;
+    file = fopen(USB_ONLINE_PATH, "r");
+    if (file) {
+        if (fscanf(file, "%d", &usb_online) != 1)
+            usb_online = -1;
+        fclose(file);
+    }
+
+    /* If either one is online, treat as charger connected */
+    if (ac_online == 1 || usb_online == 1)
+        return 1;
+
+    if (ac_online == 0 && usb_online == 0)
+        return 0;
+
+    return 1;
 }
 
-static void check_charger_status(void) {
-    FILE* file = fopen(CHARGER_ONLINE, "r");
-    if (file == NULL) {
-        perror("Failed to open file");
-        exit(1);
-    }
+static void ui_update_capacity(int capacity) {
+    if (capacity < 0 || capacity > 100)
+        return;
 
-    int status;
-    fscanf(file, "%d", &status);
-    fclose(file);
+    current_capacity = capacity;
 
-    if (status == 0) {
+    if (capacity == 100)
+        lv_obj_set_size(battery_fill, LV_PCT(100), 99 * 8); /* on 100, it goes out of the border radius because of rounded corners, don't go above 99 */
+    /* on 100, it goes out of the border radius because of rounded corners, don't go above 99 */
+    else if (capacity == 1)
+        lv_obj_set_size(battery_fill, LV_PCT(80), capacity * 8);
+    else if (capacity == 2)
+        lv_obj_set_size(battery_fill, LV_PCT(82), capacity * 8);
+    else if (capacity == 3)
+        lv_obj_set_size(battery_fill, LV_PCT(83), capacity * 8);
+    else if (capacity == 4)
+        lv_obj_set_size(battery_fill, LV_PCT(84), capacity * 8);
+    else if (capacity == 5)
+        lv_obj_set_size(battery_fill, LV_PCT(86), capacity * 8);
+    else if (capacity == 6)
+        lv_obj_set_size(battery_fill, LV_PCT(88), capacity * 8);
+    else if (capacity == 7)
+        lv_obj_set_size(battery_fill, LV_PCT(89), capacity * 8);
+    else if (capacity == 8)
+        lv_obj_set_size(battery_fill, LV_PCT(91), capacity * 8);
+    else if (capacity == 9)
+        lv_obj_set_size(battery_fill, LV_PCT(92), capacity * 8);
+    else if (capacity == 10)
+        lv_obj_set_size(battery_fill, LV_PCT(94), capacity * 8);
+    else if (capacity == 11)
+        lv_obj_set_size(battery_fill, LV_PCT(96), capacity * 8);
+    else if (capacity == 12)
+        lv_obj_set_size(battery_fill, LV_PCT(98), capacity * 8);
+    else
+        lv_obj_set_size(battery_fill, LV_PCT(100), capacity * 8);
+
+    lv_label_set_text_fmt(battery_label, "%d%%", capacity);
+    lv_obj_align(battery_fill, LV_ALIGN_BOTTOM_MID, 0, 0);
+}
+
+static void handle_charger_state(int online) {
+    current_charger_online = online;
+
+    if (online == 0) {
         printf("Charger is offline. exiting\n");
         exit(0);
     }
-}
-
-static void* check_charger(void* arg) {
-    (void)arg;
-
-    while (1) {
-        check_charger_status();
-        sleep(1);
-    }
-    return NULL;
 }
 
 static void set_brightness(int brightness) {
@@ -335,11 +372,6 @@ static void close_restricted(int fd, void *user_data) {
     (void)user_data;
     close(fd);
 }
-
-static const struct libinput_interface interface = {
-    .open_restricted = open_restricted,
-    .close_restricted = close_restricted,
-};
 
 static int is_input_device(const char *path) {
     int fd;
@@ -446,16 +478,157 @@ static void* monitor_power_key(void *arg) {
     return NULL;
 }
 
+static void* monitor_power_supply_uevent(void *arg) {
+    (void)arg;
+
+    int sockfd;
+    struct sockaddr_nl sa;
+    int bufsize = 1024 * 4;
+    char *buf = NULL;
+
+    sockfd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
+    if (sockfd < 0) {
+        perror("socket(AF_NETLINK)");
+        return NULL;
+    }
+
+    memset(&sa, 0, sizeof(sa));
+    sa.nl_family = AF_NETLINK;
+    sa.nl_pid = getpid();
+    sa.nl_groups = 1;
+
+    if (bind(sockfd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        perror("bind(netlink)");
+        close(sockfd);
+        return NULL;
+    }
+
+    buf = (char *)malloc(bufsize);
+    if (!buf) {
+        fprintf(stderr, "malloc() failed for uevent buffer\n");
+        close(sockfd);
+        return NULL;
+    }
+
+    printf("Listening for power_supply uevents via netlink...\n");
+
+    while (1) {
+        ssize_t len;
+        fd_set fds;
+
+        FD_ZERO(&fds);
+        FD_SET(sockfd, &fds);
+
+        if (select(sockfd + 1, &fds, NULL, NULL, NULL) < 0) {
+            if (errno == EINTR)
+                continue;
+            perror("select(netlink)");
+            break;
+        }
+
+        if (!FD_ISSET(sockfd, &fds))
+            continue;
+
+        len = recv(sockfd, buf, bufsize - 1, 0);
+        if (len < 0) {
+            if (errno == EINTR)
+                continue;
+            perror("recv(netlink)");
+            break;
+        }
+
+        buf[len] = '\0';
+
+        parse_power_supply_event(buf, len);
+    }
+
+    free(buf);
+    close(sockfd);
+    return NULL;
+}
+
+static int safe_atoi(const char *s, int fallback) {
+    char *endp = NULL;
+    long v = strtol(s, &endp, 10);
+    if (endp == s || *endp != '\0')
+        return fallback;
+    if (v < INT_MIN || v > INT_MAX)
+        return fallback;
+    return (int)v;
+}
+
+static void parse_power_supply_event(const char *msg, ssize_t len) {
+    const char *p = msg;
+    const char *end = msg + len;
+
+    const char *devpath = NULL;
+    const char *capacity_str = NULL;
+    const char *online_str = NULL;
+
+    static int ac_online  = -1;
+    static int usb_online = -1;
+
+    while (p < end && *p) {
+        if (strncmp(p, "DEVPATH=", 8) == 0)
+            devpath = p + 8;
+        else if (strncmp(p, "POWER_SUPPLY_CAPACITY=", 22) == 0)
+            capacity_str = p + 22;
+        else if (strncmp(p, "POWER_SUPPLY_ONLINE=", 20) == 0)
+            online_str = p + 20;
+
+        p += strlen(p) + 1;
+    }
+
+    if (!devpath || strstr(devpath, "/power_supply/") == NULL)
+        return;
+
+    /* Battery capacity event */
+    if (strstr(devpath, "/power_supply/battery") && capacity_str) {
+        int cap = safe_atoi(capacity_str, -1);
+        if (cap >= 0 && cap <= 100) {
+            printf("uevent: battery capacity %d%%\n", cap);
+            ui_update_capacity(cap);
+        }
+    }
+
+    /* Charger state event */
+    if (online_str) {
+        int online_val = safe_atoi(online_str, -1);
+
+        if (strstr(devpath, "/power_supply/ac")) {
+            if (online_val == 0 || online_val == 1) {
+                ac_online = online_val;
+                printf("uevent: ac online=%d\n", ac_online);
+            }
+        } else if (strstr(devpath, "/power_supply/usb")) {
+            if (online_val == 0 || online_val == 1) {
+                usb_online = online_val;
+                printf("uevent: usb online=%d\n", usb_online);
+            }
+        }
+
+        if (ac_online != -1 || usb_online != -1) {
+            int aggregated_online = (ac_online == 1 || usb_online == 1) ? 1 : 0;
+            handle_charger_state(aggregated_online);
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (!bootreason_charger()) {
         printf("Device is not in charger mode\n");
         exit(0);
     }
 
-    check_charger_status();
+    current_charger_online = read_charger_online();
+    if (current_charger_online == 0) {
+        printf("Charger is offline at startup. exiting\n");
+        exit(0);
+    }
 
+    /* Plymouth blocks minui */
     struct stat buffer;
-    if (stat("/usr/bin/plymouth", &buffer) == 0) /* plymouth will block minui */
+    if (stat("/usr/bin/plymouth", &buffer) == 0)
         system("plymouth quit");
 
     /* Parse command line options */
@@ -573,11 +746,11 @@ int main(int argc, char *argv[]) {
     grad.dir = LV_GRAD_DIR_VER;            /* Vertical gradient */
     grad.stops_count = 2;                  /* 2 color stops */
     grad.stops[0].color = lv_color_hex(0x093E94); /* Dark blue color */
-    grad.stops[1].color = lv_color_hex(0xCCCCCC); /* White-grayish color */
+    grad.stops[1].color = lv_color_hex(0xCCCCCC); /* Light grayish color */
     grad.stops[0].frac = 0;                /* Position of the first stop (0%) */
     grad.stops[1].frac = 255;              /* Position of the second stop (100%) */
 
-    /* Set the gradient for the style's background */
+    /* Apply style settings */
     lv_style_set_bg_grad(&style_gradient, &grad);
     lv_style_set_bg_opa(&style_gradient, LV_OPA_COVER);
     lv_style_set_radius(&style_gradient, 55);
@@ -587,7 +760,7 @@ int main(int argc, char *argv[]) {
     /* Apply the style to the battery fill object */
     lv_obj_add_style(battery_fill, &style_gradient, 0);
 
-    /* Battery's tip */
+    /* Battery "tip" */
     lv_obj_t *battery_tip = lv_obj_create(lv_scr_act());
     lv_obj_set_size(battery_tip, 140, 45);
     lv_obj_align_to(battery_tip, battery, LV_ALIGN_OUT_TOP_MID, 0, -5);
@@ -599,20 +772,29 @@ int main(int argc, char *argv[]) {
     battery_label = lv_label_create(battery);
     lv_label_set_text(battery_label, "");
     lv_obj_align(battery_label, LV_ALIGN_CENTER, 0, 0);
+
     static lv_style_t style;
     lv_style_init(&style);
     lv_style_set_text_font(&style, &lv_font_montserrat_48);
     lv_obj_add_style(battery_label, &style, 0);
 
+    current_capacity = read_battery_capacity();
+    if (current_capacity >= 0 && current_capacity <= 100)
+        ui_update_capacity(current_capacity);
+    else
+        ui_update_capacity(0);
+
+    handle_charger_state(current_charger_online);
+
     /* Set initial brightness to 1/4 of max_brightness */
     set_brightness(max_brightness / 4);
 
     /* Create threads */
-    pthread_t battery_thread, charger_thread, power_key_thread;
+    pthread_t power_key_thread;
+    pthread_t uevent_thread;
 
-    pthread_create(&battery_thread, NULL, update_battery_level, NULL);
-    pthread_create(&charger_thread, NULL, check_charger, NULL);
     pthread_create(&power_key_thread, NULL, monitor_power_key, NULL);
+    pthread_create(&uevent_thread, NULL, monitor_power_supply_uevent, NULL);
 
     /* Run lvgl in "tickless" mode */
     while (1) {
