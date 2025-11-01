@@ -48,6 +48,11 @@
 #include <errno.h>
 #include <dirent.h>
 #include <limits.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include <sys/reboot.h>
 #include <sys/socket.h>
@@ -67,6 +72,7 @@
 #define USB_ONLINE_PATH "/sys/class/power_supply/usb/online"
 #define MAX_BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/max_brightness"
 #define BRIGHTNESS_PATH "/sys/class/leds/lcd-backlight/brightness"
+#define SCREEN_TIMEOUT_SECONDS 15
 
 cli_opts cli_options;
 config_opts conf_opts;
@@ -74,6 +80,8 @@ config_opts conf_opts;
 bool is_alternate_theme = true;
 bool screen_is_on = true;
 int max_brightness = 0;
+
+static uint64_t last_interaction_ms = 0;
 
 lv_obj_t *battery_fill;
 lv_obj_t *battery_label;
@@ -143,6 +151,11 @@ static void set_brightness(int brightness);
 static void toggle_screen(void);
 
 /**
+ * Turn the screen on and refresh timeout
+ */
+static void wake_screen(void);
+
+/**
  * Initialize libinput and monitor for power key events
  *
  * @param path Device path to open
@@ -189,6 +202,11 @@ static void* monitor_power_supply_uevent(void *arg);
 static void parse_power_supply_event(const char *msg, ssize_t len);
 
 /**
+ * Return current monotonic time in milliseconds.
+ */
+static uint64_t now_ms(void);
+
+/**
  * Static data / structs
  */
 
@@ -200,6 +218,12 @@ static const struct libinput_interface interface = {
 /**
  * Static functions
  */
+
+static uint64_t now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ((uint64_t)ts.tv_sec * 1000ULL) + (ts.tv_nsec / 1000000ULL);
+}
 
 static void set_theme(bool is_alternate) {
     theme_apply(&(themes_themes[is_alternate ? conf_opts.theme.alternate_id : conf_opts.theme.default_id]));
@@ -266,7 +290,7 @@ static void ui_update_capacity(int capacity) {
 
     if (capacity == 100)
         lv_obj_set_size(battery_fill, LV_PCT(100), 99 * 8); /* on 100, it goes out of the border radius because of rounded corners, don't go above 99 */
-    /* on 100, it goes out of the border radius because of rounded corners, don't go above 99 */
+    /* levels 1 to 12 are a little different as we have rounded corners and need to take care of it */
     else if (capacity == 1)
         lv_obj_set_size(battery_fill, LV_PCT(80), capacity * 8);
     else if (capacity == 2)
@@ -327,11 +351,17 @@ static void set_brightness(int brightness) {
     screen_is_on = (brightness > 0);
 }
 
+static void wake_screen(void) {
+    if (!screen_is_on)
+        set_brightness(max_brightness / 4);
+    last_interaction_ms = now_ms();
+}
+
 static void toggle_screen(void) {
     if (screen_is_on)
         set_brightness(0);
     else
-        set_brightness(max_brightness / 4);
+        wake_screen();
 }
 
 static int bootreason_charger(void) {
@@ -465,8 +495,12 @@ static void* monitor_power_key(void *arg) {
                     struct libinput_device *device = libinput_event_get_device(event);
                     const char *device_name = libinput_device_get_name(device);
 
-                    printf("KEY_POWER released on device '%s'. Toggling screen state.\n", device_name);
-                    toggle_screen();
+                    printf("KEY_POWER released on device '%s'. Toggling screen.\n", device_name);
+
+                    if (!screen_is_on)
+                        wake_screen();
+                    else
+                        toggle_screen();
                 }
             }
 
@@ -789,6 +823,8 @@ int main(int argc, char *argv[]) {
     /* Set initial brightness to 1/4 of max_brightness */
     set_brightness(max_brightness / 4);
 
+    last_interaction_ms = now_ms();
+
     /* Create threads */
     pthread_t power_key_thread;
     pthread_t uevent_thread;
@@ -800,6 +836,18 @@ int main(int argc, char *argv[]) {
     while (1) {
         lv_task_handler();
         usleep(5000);
+
+        if (screen_is_on) {
+            uint64_t now = now_ms();
+            uint64_t elapsed_ms = now - last_interaction_ms;
+            uint64_t timeout_ms = (uint64_t)SCREEN_TIMEOUT_SECONDS * 1000ULL;
+
+            if (elapsed_ms >= timeout_ms) {
+                printf("Screen timeout reached (%" PRIu64 " ms >= %" PRIu64 " ms). Turning screen off.\n",
+                       elapsed_ms, timeout_ms);
+                set_brightness(0);
+            }
+        }
     }
 
     return 0;
